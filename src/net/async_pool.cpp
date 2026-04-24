@@ -23,8 +23,15 @@ AsyncPool::AsyncPool(std::size_t thread_count)
 {}
 
 AsyncPool::~AsyncPool() {
-    // 소멸 시엔 hard-stop — 누수 방지. 정상 경로는 명시적 stop() 권장.
-    stop(/*force=*/true);
+    // 소멸 경로 — hard-stop + join. restart/guard 재생성은 의미 없어 생략.
+    if (!running_.load(std::memory_order_acquire)) return;
+    guard_.reset();
+    io_.stop();
+    for (auto& t : workers_) {
+        if (t.joinable()) t.join();
+    }
+    workers_.clear();
+    running_.store(false, std::memory_order_release);
 }
 
 void AsyncPool::start() {
