@@ -7,6 +7,7 @@
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/strand.hpp>
+#include <atomic>
 #include <chrono>
 
 namespace sps::net {
@@ -21,20 +22,21 @@ public:
     boost::asio::awaitable<void> acquire();
 
     // 런타임 변경 (GUI Settings 에서 호출). 0.1 미만은 무시.
+    // 스레드 안전: rate_ 는 atomic.
     void set_rate(double tokens_per_second);
 
     // 테스트용 조회.
-    double rate() const noexcept { return rate_; }
+    double rate() const noexcept { return rate_.load(std::memory_order_relaxed); }
     double capacity() const noexcept { return capacity_; }
 
 private:
     void refill_locked();
 
     boost::asio::strand<boost::asio::any_io_executor> strand_;
-    double rate_;
-    double capacity_;
-    double tokens_;
-    std::chrono::steady_clock::time_point last_refill_;
+    std::atomic<double> rate_;           // strand 밖에서도 수정 가능 (set_rate).
+    double capacity_;                     // 생성 후 불변.
+    double tokens_;                       // strand 내에서만 접근.
+    std::chrono::steady_clock::time_point last_refill_;  // strand 내에서만 접근.
 };
 
 } // namespace sps::net

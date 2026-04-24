@@ -23,12 +23,13 @@ RateLimiter::RateLimiter(boost::asio::any_io_executor exec,
 void RateLimiter::refill_locked() {
     const auto now = steady_clock::now();
     const double dt = duration<double>(now - last_refill_).count();
-    tokens_ = std::min(capacity_, tokens_ + dt * rate_);
+    const double r = rate_.load(std::memory_order_relaxed);
+    tokens_ = std::min(capacity_, tokens_ + dt * r);
     last_refill_ = now;
 }
 
 void RateLimiter::set_rate(double tokens_per_second) {
-    rate_ = std::max(0.1, tokens_per_second);
+    rate_.store(std::max(0.1, tokens_per_second), std::memory_order_relaxed);
 }
 
 boost::asio::awaitable<void> RateLimiter::acquire() {
@@ -43,8 +44,9 @@ boost::asio::awaitable<void> RateLimiter::acquire() {
             co_return;
         }
         const double need = 1.0 - tokens_;
+        const double r    = rate_.load(std::memory_order_relaxed);
         const auto wait = duration_cast<nanoseconds>(
-            duration<double>(need / rate_));
+            duration<double>(need / r));
 
         // 로컬 timer — 동시 acquire 들끼리 서로 취소 못 하게.
         boost::asio::steady_timer t{strand_};
