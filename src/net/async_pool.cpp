@@ -28,8 +28,8 @@ AsyncPool::~AsyncPool() {
 }
 
 void AsyncPool::start() {
-    if (running_) return;
-    running_ = true;
+    if (running_.load(std::memory_order_acquire)) return;
+    running_.store(true, std::memory_order_release);
     workers_.reserve(thread_count_);
     for (std::size_t i = 0; i < thread_count_; ++i) {
         workers_.emplace_back([this, i] {
@@ -47,7 +47,7 @@ void AsyncPool::start() {
 }
 
 void AsyncPool::stop(bool force) {
-    if (!running_) return;
+    if (!running_.load(std::memory_order_acquire)) return;
 
     // graceful: 새 work 거부(guard 해제) → 진행 중인 핸들러 끝나면 run() 반환.
     // hard:     io.stop() 으로 대기 중인 타이머·async_wait 취소.
@@ -64,7 +64,7 @@ void AsyncPool::stop(bool force) {
     // 재시작 대비 — io_context 리셋.
     io_.restart();
     guard_ = boost::asio::make_work_guard(io_);
-    running_ = false;
+    running_.store(false, std::memory_order_release);
 }
 
 } // namespace sps::net

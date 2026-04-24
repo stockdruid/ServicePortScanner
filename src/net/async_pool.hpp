@@ -20,6 +20,7 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/use_future.hpp>
+#include <atomic>
 #include <cstddef>
 #include <future>
 #include <thread>
@@ -40,7 +41,7 @@ public:
     void start();
     void stop(bool force = false);  // false = graceful, true = hard
 
-    bool running() const noexcept { return running_; }
+    bool running() const noexcept { return running_.load(std::memory_order_acquire); }
     std::size_t thread_count() const noexcept { return thread_count_; }
 
     boost::asio::io_context& context() noexcept { return io_; }
@@ -60,7 +61,7 @@ private:
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> guard_;
     std::vector<std::thread> workers_;
     std::size_t thread_count_;
-    bool running_ = false;
+    std::atomic<bool> running_{false};
 };
 
 } // namespace sps::net
