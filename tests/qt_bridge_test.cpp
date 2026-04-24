@@ -5,6 +5,7 @@
 #include <QSignalSpy>
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <thread>
 
 using sps::core::PortState;
@@ -82,10 +83,12 @@ TEST_CASE("QtBridge: many posts from multiple workers", "[qt_bridge]") {
     }
     for (auto& t : ts) t.join();
 
-    // 이벤트 큐 다 비울 때까지 processEvents.
+    // 이벤트 큐 다 비울 때까지 processEvents. 전체 데드라인 5초.
+    // spy.wait() 는 "새 시그널 도착" 대기라 CI slow runner 에서 flake 나기 쉬움.
     const int total = kWorkers * kPerWorker;
-    while (spy.count() < total) {
-        if (!spy.wait(200)) break;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (spy.count() < total && std::chrono::steady_clock::now() < deadline) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     }
     REQUIRE(spy.count() == total);
 }
