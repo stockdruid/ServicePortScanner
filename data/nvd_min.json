@@ -1,0 +1,29 @@
+{
+  "openssh": [
+    { "version_prefix": "7.4",  "id": "CVE-2018-15473", "cvss": 5.3 },
+    { "version_prefix": "7.7",  "id": "CVE-2018-15919", "cvss": 5.3 },
+    { "version_prefix": "8.5",  "id": "CVE-2021-41617", "cvss": 7.0 },
+    { "version_prefix": "9.5",  "id": "CVE-2023-48795", "cvss": 5.9 }
+  ],
+  "vsftpd": [
+    { "version_prefix": "2.3.4", "id": "CVE-2011-2523", "cvss": 9.8 }
+  ],
+  "proftpd": [
+    { "version_prefix": "1.3.5", "id": "CVE-2015-3306", "cvss": 9.8 }
+  ],
+  "nginx": [
+    { "version_prefix": "1.15", "id": "CVE-2019-9511",  "cvss": 7.5 },
+    { "version_prefix": "1.20", "id": "CVE-2021-23017", "cvss": 9.8 }
+  ],
+  "apache": [
+    { "version_prefix": "2.4.49", "id": "CVE-2021-41773", "cvss": 9.8 },
+    { "version_prefix": "2.4.50", "id": "CVE-2021-42013", "cvss": 9.8 }
+  ],
+  "exim": [
+    { "version_prefix": "4.87",  "id": "CVE-2019-10149", "cvss": 9.8 }
+  ],
+  "tls": [
+    { "version_prefix": "TLSv1.0", "id": "CVE-2014-3566", "cvss": 3.4 },
+    { "version_prefix": "TLSv1.1", "id": "CVE-2011-3389", "cvss": 4.3 }
+  ]
+}
