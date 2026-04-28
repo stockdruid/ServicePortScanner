@@ -3,6 +3,7 @@ find_package(CLI11 CONFIG REQUIRED)
 add_library(spscan_cli STATIC
     args.cpp
     scope_guard.cpp
+    top_ports.cpp
 )
 
 target_include_directories(spscan_cli PUBLIC

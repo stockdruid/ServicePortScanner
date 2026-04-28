@@ -1,4 +1,5 @@
 #include "cli/args.hpp"
+#include "cli/top_ports.hpp"
 
 #include <CLI/CLI.hpp>
 
@@ -75,9 +76,20 @@ ParseResult parse(int argc, char** argv) {
     app.add_option("--ports,-p", ports_spec,
                    "Port spec, e.g. 22,80,443 or 1-1024 or mix")
        ->capture_default_str();
-    app.add_option("--rate", res.args.rate, "Packets/sec rate limit")
+    app.add_option("--rate", res.args.rate,
+                   "Packets/sec rate limit (Adaptive 시 시작값)")
        ->capture_default_str()
        ->check(CLI::Range(1.0, 100000.0));
+    app.add_option("--max-rate", res.args.max_rate,
+                   "Adaptive 모드 상한 (loss<1% 일 때 여기까지 증속)")
+       ->capture_default_str()
+       ->check(CLI::Range(1.0, 100000.0));
+    app.add_flag("--adaptive", res.args.adaptive,
+                 "RTT/loss 기반 자동 송신율 조정 (RFC 6298 EWMA)");
+    app.add_option("--top-ports", res.args.top_ports,
+                   "상위 N 개 포트만 스캔 (--ports 무시)")
+       ->check(CLI::Range(static_cast<std::size_t>(1),
+                          static_cast<std::size_t>(1000)));
     app.add_option("--timeout-ms", timeout_ms, "Per-port I/O timeout")
        ->capture_default_str()
        ->check(CLI::Range(100, 60000));
@@ -106,11 +118,18 @@ ParseResult parse(int argc, char** argv) {
         return res;
     }
 
-    res.args.ports = expand_port_spec(ports_spec);
+    if (res.args.top_ports > 0) {
+        res.args.ports = top_n_ports(res.args.top_ports);
+    } else {
+        res.args.ports = expand_port_spec(ports_spec);
+    }
     if (res.args.ports.empty()) {
-        res.error = "invalid --ports spec: " + ports_spec;
+        res.error = "invalid port selection (--ports / --top-ports)";
         res.ok = false;
         return res;
+    }
+    if (res.args.max_rate < res.args.rate) {
+        res.args.max_rate = res.args.rate;  // 정합성 보정
     }
     res.args.timeout = std::chrono::milliseconds(timeout_ms);
     res.args.report = parse_report(report_str);

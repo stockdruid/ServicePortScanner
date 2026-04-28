@@ -61,9 +61,16 @@ scan_one(asio::any_io_executor exec,
          const sps::fp::CveDb* cves) {
     co_await limiter.acquire();
 
-    // step 1: connect.
+    // step 1: connect — RTT 측정해서 limiter 에 피드백.
     ScanRequest req{host, port, timeout};
+    const auto t0 = std::chrono::steady_clock::now();
     auto base = co_await sps::core::connect_scan(exec, req);
+    const auto rtt = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - t0);
+    // Filtered = timeout = loss 신호. Closed/Open 은 정상 응답.
+    const bool was_loss = (base.state == PortState::Filtered);
+    limiter.on_response(rtt, was_loss);
+
     if (base.state != PortState::Open || probes == nullptr) {
         co_return base;
     }
@@ -123,7 +130,14 @@ int run(const sps::cli::Args& args) {
 
     sps::net::AsyncPool pool(args.threads);
     pool.start();
-    sps::net::RateLimiter limiter(pool.executor(), args.rate, args.rate);
+    const auto mode = args.adaptive
+        ? sps::net::RateLimiter::Mode::Adaptive
+        : sps::net::RateLimiter::Mode::Fixed;
+    sps::net::RateLimiter limiter(pool.executor(), args.rate, args.rate,
+                                   mode, args.max_rate);
+    fmt::print(stderr, "[spscan] rate mode: {} (start={:.1f} pps, cap={:.1f})\n",
+               args.adaptive ? "adaptive" : "fixed",
+               args.rate, args.max_rate);
 
     std::vector<std::future<ScanResult>> futs;
     futs.reserve(args.ports.size());
@@ -154,6 +168,13 @@ int run(const sps::cli::Args& args) {
 
     fmt::print(stderr, "[spscan] open ports: {} / {}\n",
                open_count, results.size());
+    if (args.adaptive) {
+        fmt::print(stderr,
+                   "[spscan] adaptive: rate={:.1f} pps, srtt={:.1f} ms, "
+                   "loss={:.2f}% (n={})\n",
+                   limiter.rate(), limiter.srtt_ms(),
+                   limiter.loss_ratio() * 100.0, limiter.samples());
+    }
 
     if (args.report == sps::cli::ReportKind::None) {
         for (const auto& r : results) {

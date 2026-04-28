@@ -16,8 +16,10 @@ enum class ReportKind { None, Json, Csv, Html };
 
 struct Args {
     std::string target;                 // 단일 IP
-    std::vector<std::uint16_t> ports;   // expanded port list
-    double rate = 100.0;                // tokens/sec
+    std::vector<std::uint16_t> ports;   // expanded port list (after --top-ports merge)
+    double rate = 100.0;                // tokens/sec (Adaptive 시 시작값)
+    double max_rate = 10000.0;          // adaptive 모드 상한
+    bool adaptive = false;              // --adaptive (RTT/loss 기반 자동 조정)
     std::chrono::milliseconds timeout{2000};
     ReportKind report = ReportKind::None;
     std::string out_path;
@@ -25,6 +27,7 @@ struct Args {
     bool consent = false;               // --i-know-what-im-doing
     bool no_probe = false;              // skip service probes
     std::size_t threads = 0;            // 0 = hw_concurrency
+    std::size_t top_ports = 0;          // 0 = 사용 안 함, >0 = 상위 N 포트 사용
 };
 
 struct ParseResult {
