@@ -33,6 +33,8 @@ ui_*.h
 *.log
 audit.log
 data/nvd_*.json.gz
+scan.json
+scan.csv
 
 # OS
 .DS_Store

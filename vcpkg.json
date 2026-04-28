@@ -1,20 +1,33 @@
 {
   "name": "service-port-scanner",
   "version-string": "0.1.0",
+  "builtin-baseline": "67b207f199b5d2ee09f206d2e9e9171e7c7a3274",
   "dependencies": [
-    { "name": "boost-asio",    "version>=": "1.84.0" },
-    { "name": "boost-beast",   "version>=": "1.84.0" },
-    { "name": "boost-system",  "version>=": "1.84.0" },
-    { "name": "openssl",       "version>=": "3.2.0" },
-    { "name": "qtbase",        "version>=": "6.6.0" },
-    { "name": "qtcharts",      "version>=": "6.6.0" },
-    { "name": "spdlog",        "version>=": "1.13.0" },
-    { "name": "nlohmann-json", "version>=": "3.11.3" },
-    { "name": "fmt",           "version>=": "10.2.0" },
-    { "name": "cli11",         "version>=": "2.4.0" },
-    { "name": "tomlplusplus",  "version>=": "3.4.0" },
-    { "name": "magic-enum",    "version>=": "0.9.5" },
-    { "name": "tl-expected",   "version>=": "1.1.0" },
-    { "name": "catch2",        "version>=": "3.5.0" }
-  ]
+    "boost-asio",
+    "boost-system",
+    "openssl",
+    "spdlog",
+    "fmt",
+    "nlohmann-json",
+    "cli11",
+    "catch2"
+  ],
+  "features": {
+    "gui": {
+      "description": "Qt6 GUI front-end (qtbase + qtcharts)",
+      "dependencies": [
+        { "name": "qtbase",  "default-features": false, "features": ["widgets"] },
+        "qtcharts"
+      ]
+    },
+    "extras": {
+      "description": "Optional helper libs (config parser, enum reflect, expected backport, http probe via Beast)",
+      "dependencies": [
+        "boost-beast",
+        "tomlplusplus",
+        "magic-enum",
+        "tl-expected"
+      ]
+    }
+  }
 }
