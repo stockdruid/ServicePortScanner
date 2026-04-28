@@ -18,11 +18,13 @@
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/use_future.hpp>
 #include <atomic>
 #include <cstddef>
 #include <future>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -58,7 +60,8 @@ public:
 
 private:
     boost::asio::io_context io_;
-    boost::asio::executor_work_guard<boost::asio::io_context::executor_type> guard_;
+    // executor_work_guard 는 assignment private — restart 시 emplace 로 교체.
+    std::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> guard_;
     std::vector<std::thread> workers_;
     std::size_t thread_count_;
     std::atomic<bool> running_{false};

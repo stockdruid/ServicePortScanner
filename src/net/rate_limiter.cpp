@@ -1,6 +1,8 @@
 #include "rate_limiter.hpp"
 
+#include <boost/asio/bind_executor.hpp>
 #include <boost/asio/dispatch.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
 
