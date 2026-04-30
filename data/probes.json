@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "_comment": "Stage 3 — Probe DB. 새 프로토콜은 항목 1개 추가로 끝. send=\"\" 면 passive(서버 인사 읽기). version: \"$1\" = 첫 캡처 그룹 사용. icase 로 컴파일됨.",
+  "probes": [
+    {
+      "name": "ssh",
+      "rarity": 6,
+      "ports": [22, 2222],
+      "send": "",
+      "match": [
+        { "regex": "^SSH-\\d+\\.\\d+-([^\\r\\n]+)",
+          "service": "ssh",
+          "version": "$1" }
+      ]
+    },
+    {
+      "name": "ftp",
+      "rarity": 7,
+      "ports": [21],
+      "send": "",
+      "match": [
+        { "regex": "^220[\\s\\S]*?((?:vsFTPd|ProFTPD|FileZilla|Pure-FTPd)[\\s/]?[\\d.\\w-]+)",
+          "service": "ftp",
+          "version": "$1" },
+        { "regex": "^220",
+          "service": "ftp",
+          "version": "" }
+      ]
+    },
+    {
+      "name": "smtp",
+      "rarity": 7,
+      "ports": [25, 465, 587],
+      "send": "",
+      "match": [
+        { "regex": "^220[\\s\\S]*?((?:Postfix|Sendmail|Exim|Microsoft ESMTP|qmail)[\\s/]?[\\d.\\w-]*)",
+          "service": "smtp",
+          "version": "$1" },
+        { "regex": "^220",
+          "service": "smtp",
+          "version": "" }
+      ]
+    },
+    {
+      "name": "http",
+      "rarity": 8,
+      "ports": [80, 8080, 8000, 8888],
+      "send": "OPTIONS / HTTP/1.0\r\nUser-Agent: spscan/0.1\r\nAccept: */*\r\nConnection: close\r\n\r\n",
+      "match": [
+        { "regex": "^HTTP/[0-9.]+[\\s\\S]*?Server:\\s*([^\\r\\n]+)",
+          "service": "http",
+          "version": "$1" },
+        { "regex": "^HTTP/",
+          "service": "http",
+          "version": "" }
+      ]
+    }
+  ]
+}

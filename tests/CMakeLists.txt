@@ -44,6 +44,14 @@ target_link_libraries(report_tests PRIVATE
     Catch2::Catch2WithMain
 )
 
+add_executable(probes_tests
+    probe_engine_test.cpp
+)
+target_link_libraries(probes_tests PRIVATE
+    spscan_probes
+    Catch2::Catch2WithMain
+)
+
 # --- Qt 테스트 (옵션, qt_bridge 빌드 시에만) ---
 if(SPSCAN_BUILD_QT_BRIDGE)
     find_package(Qt6 CONFIG REQUIRED COMPONENTS Core Test)
@@ -66,6 +74,7 @@ catch_discover_tests(core_tests)
 catch_discover_tests(cli_tests)
 catch_discover_tests(fp_tests)
 catch_discover_tests(report_tests)
+catch_discover_tests(probes_tests)
 if(SPSCAN_BUILD_QT_BRIDGE)
     catch_discover_tests(net_qt_tests)
 endif()

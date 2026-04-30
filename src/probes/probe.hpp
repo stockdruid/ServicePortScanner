@@ -44,6 +44,8 @@ public:
 using ProbePtr = std::unique_ptr<Probe>;
 
 // 표준 probe 모음 (등록 순서 = 시도 순서).
-std::vector<ProbePtr> default_probes();
+// probes_db_path 가 비어있지 않으면 외부 JSON DB 로드, 실패 시 임베디드 폴백.
+// TLS probe 는 항상 네이티브로 끝에 추가.
+std::vector<ProbePtr> default_probes(const std::string& probes_db_path = "");
 
 } // namespace sps::probes

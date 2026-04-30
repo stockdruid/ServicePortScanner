@@ -126,7 +126,7 @@ int run(const sps::cli::Args& args) {
         cves = sps::fp::CveDb::load(args.cve_db_path);
         fmt::print(stderr, "[spscan] CVE entries loaded: {}\n", cves.size());
     }
-    auto probes = sps::probes::default_probes();
+    auto probes = sps::probes::default_probes(args.probes_db_path);
 
     sps::net::AsyncPool pool(args.threads);
     pool.start();

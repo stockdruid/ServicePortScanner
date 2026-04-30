@@ -99,6 +99,8 @@ ParseResult parse(int argc, char** argv) {
     app.add_option("--out,-o", res.args.out_path, "Output file path");
     app.add_option("--cve-db", res.args.cve_db_path,
                    "Path to NVD-min JSON file");
+    app.add_option("--probes-db", res.args.probes_db_path,
+                   "External probe rules JSON (default: embedded ssh/ftp/smtp/http)");
     app.add_option("--threads,-j", res.args.threads,
                    "Worker threads (0 = auto)")
        ->capture_default_str();
