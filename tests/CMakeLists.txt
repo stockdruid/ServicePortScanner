@@ -69,3 +69,8 @@ catch_discover_tests(report_tests)
 if(SPSCAN_BUILD_QT_BRIDGE)
     catch_discover_tests(net_qt_tests)
 endif()
+
+# Stage 0 — 효율성 PR before/after 측정용 micro-benchmark.
+if(SPSCAN_BUILD_BENCH)
+    add_subdirectory(bench)
+endif()

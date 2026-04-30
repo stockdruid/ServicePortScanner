@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(SPSCAN_BUILD_GUI "Build Qt6 GUI front-end" OFF)
 option(SPSCAN_BUILD_QT_BRIDGE "Build Qt signal bridge library" ${SPSCAN_BUILD_GUI})
 option(SPSCAN_BUILD_TESTS "Build tests" ON)
+option(SPSCAN_BUILD_BENCH "Build Stage 0 benchmark harness (heavy, opt-in)" OFF)
 
 # Qt6 자동 MOC/RCC/UIC (GUI 또는 qt_bridge 빌드 시).
 if(SPSCAN_BUILD_GUI OR SPSCAN_BUILD_QT_BRIDGE)
