@@ -33,6 +33,7 @@ add_executable(fp_tests
     ja4_server_test.cpp
     ja4_x509_test.cpp
     cdn_lookup_test.cpp
+    epss_lookup_test.cpp
 )
 target_link_libraries(fp_tests PRIVATE
     spscan_fp

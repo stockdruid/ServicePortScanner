@@ -21,6 +21,7 @@ spscan — CLI entry point (MVP, GUI 제외).
 #include "core/scanner.hpp"
 #include "fp/cdn_lookup.hpp"
 #include "fp/cve_lookup.hpp"
+#include "fp/epss_lookup.hpp"
 #include "net/async_pool.hpp"
 #include "net/rate_limiter.hpp"
 #include "probes/probe.hpp"
@@ -139,6 +140,12 @@ int run(const sps::cli::Args& args) {
                    args.target, cdn_provider);
     }
 
+    sps::fp::EpssDb epss;
+    if (!args.epss_db_path.empty()) {
+        epss = sps::fp::EpssDb::load(args.epss_db_path);
+        fmt::print(stderr, "[spscan] EPSS entries loaded: {}\n", epss.size());
+    }
+
     sps::net::AsyncPool pool(args.threads);
     pool.start();
     const auto mode = args.adaptive
@@ -171,6 +178,13 @@ int run(const sps::cli::Args& args) {
             auto r = f.get();
             if (r.state == PortState::Open) ++open_count;
             r.cdn = cdn_provider;
+            if (!epss.empty()) {
+                for (auto& hit : r.cves) {
+                    const auto e = epss.lookup(hit.id);
+                    hit.epss = e.epss;
+                    hit.percentile = e.percentile;
+                }
+            }
             results.push_back(std::move(r));
         } catch (const std::exception& e) {
             fmt::print(stderr, "[spscan] task error: {}\n", e.what());

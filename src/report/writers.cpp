@@ -71,7 +71,15 @@ std::string to_json(std::span<const sps::core::ScanResult> results) {
         item["cdn"] = r.cdn;
         nlohmann::json cves = nlohmann::json::array();
         for (const auto& c : r.cves) {
-            cves.push_back({{"id", c.id}, {"cvss", c.cvss}});
+            // risk = CVSS × EPSS — 발표·정렬용 파생값 (0..10).
+            const double risk = c.cvss * c.epss;
+            cves.push_back({
+                {"id", c.id},
+                {"cvss", c.cvss},
+                {"epss", c.epss},
+                {"percentile", c.percentile},
+                {"risk", risk}
+            });
         }
         item["cves"] = std::move(cves);
         arr.push_back(std::move(item));

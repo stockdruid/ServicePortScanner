@@ -7,6 +7,7 @@ add_library(spscan_fp STATIC
     ja4_x509.cpp
     cdn_lookup.cpp
     cve_lookup.cpp
+    epss_lookup.cpp
 )
 
 target_include_directories(spscan_fp PUBLIC

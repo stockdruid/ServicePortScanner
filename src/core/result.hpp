@@ -18,8 +18,10 @@ enum class PortState : std::uint8_t {
 };
 
 struct CveHit {
-    std::string id;       // e.g. "CVE-2018-15473"
-    double      cvss = 0; // 0.0 ~ 10.0
+    std::string id;          // e.g. "CVE-2018-15473"
+    double      cvss = 0;    // 0.0 ~ 10.0
+    double      epss = 0;    // 0..1, 30-day exploit probability (Stage 10)
+    double      percentile = 0;  // 0..1, EPSS percentile rank
 };
 
 struct ScanResult {

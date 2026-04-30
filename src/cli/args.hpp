@@ -26,6 +26,7 @@ struct Args {
     std::string cve_db_path;            // optional
     std::string probes_db_path;         // optional probe rules JSON (default = embedded)
     std::string cdn_db_path;            // optional CDN/WAF CIDR JSON (default = embedded)
+    std::string epss_db_path;           // optional EPSS CSV (no default — opt-in)
     bool consent = false;               // --i-know-what-im-doing
     bool no_probe = false;              // skip service probes
     std::size_t threads = 0;            // 0 = hw_concurrency
