@@ -29,7 +29,9 @@ struct ScanResult {
     std::string service;
     std::string version;
     std::string banner;
-    std::string ja4;
+    std::string ja4;     // legacy/MVP server fingerprint (Stage 4 이후 ja4s 권장)
+    std::string ja4s;    // FoxIO JA4S — TLS ServerHello fingerprint
+    std::string ja4x;    // FoxIO JA4X — X.509 cert fingerprint
     std::vector<CveHit> cves;
     std::chrono::steady_clock::time_point completed_at{};
 };

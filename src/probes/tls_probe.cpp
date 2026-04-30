@@ -1,14 +1,19 @@
+#include "fp/ja4_server.hpp"
+#include "fp/ja4_x509.hpp"
 #include "probes/banner_io.hpp"
 #include "probes/probe.hpp"
 
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
 
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/write.hpp>
 
+#include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace sps::probes {
 
@@ -29,6 +34,27 @@ struct BioDeleter {
 using SslCtxPtr = std::unique_ptr<SSL_CTX, SslDeleter>;
 using SslPtr = std::unique_ptr<SSL, SslSessionDeleter>;
 using BioPtr = std::unique_ptr<BIO, BioDeleter>;
+
+// ServerHello 핸드셰이크 메시지 캡처용 — JA4S 계산에 필요.
+struct TlsCapture {
+    std::vector<std::uint8_t> server_hello;  // 4-byte handshake header 포함.
+};
+
+extern "C" void msg_capture_cb(int write_p,
+                                int /*version*/,
+                                int content_type,
+                                const void* buf,
+                                size_t len,
+                                SSL* /*ssl*/,
+                                void* arg) {
+    if (write_p != 0) return;       // 받은 메시지만.
+    if (content_type != 22) return; // handshake.
+    if (!buf || len < 1) return;
+    const auto* p = static_cast<const std::uint8_t*>(buf);
+    if (p[0] != 0x02) return;       // ServerHello 만 (handshake type 2).
+    auto* cap = static_cast<TlsCapture*>(arg);
+    cap->server_hello.assign(p, p + len);
+}
 
 // 비동기 BIO pump: SSL_do_handshake 진행상황에 맞춰 socket I/O.
 asio::awaitable<bool>
@@ -72,6 +98,42 @@ drive_handshake(asio::ip::tcp::socket& sock,
     }
 }
 
+void fill_fingerprints(SSL* ssl, const TlsCapture& cap, ProbeOutcome& out) {
+    // JA4S: ServerHello 바이트에서 cipher_id / extension_types 파싱 후
+    //        SSL API 로 ALPN/cipher 보강.
+    if (cap.server_hello.size() > 4) {
+        // 4-byte handshake header (type=2, len=3 bytes) 건너뛰기.
+        sps::fp::Ja4SInput in = sps::fp::parse_server_hello(
+            cap.server_hello.data() + 4,
+            cap.server_hello.size() - 4);
+
+        if (auto* cipher = SSL_get_current_cipher(ssl)) {
+            const auto id = SSL_CIPHER_get_protocol_id(cipher);
+            in.cipher_id = static_cast<std::uint16_t>(id);
+        }
+        const unsigned char* alpn_data = nullptr;
+        unsigned int alpn_len = 0;
+        SSL_get0_alpn_selected(ssl, &alpn_data, &alpn_len);
+        if (alpn_data && alpn_len > 0) {
+            in.alpn.assign(reinterpret_cast<const char*>(alpn_data),
+                           static_cast<std::size_t>(alpn_len));
+        }
+        out.ja4s = sps::fp::compute_ja4s(in);
+    }
+
+    // JA4X: 서버 인증서 OID 추출.
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    X509* peer = SSL_get1_peer_certificate(ssl);
+#else
+    X509* peer = SSL_get_peer_certificate(ssl);
+#endif
+    if (peer) {
+        auto x = sps::fp::extract_ja4x_input(peer);
+        out.ja4x = sps::fp::compute_ja4x(x);
+        X509_free(peer);
+    }
+}
+
 class TlsProbe final : public Probe {
 public:
     std::string_view name() const noexcept override { return "tls"; }
@@ -91,6 +153,17 @@ public:
 
         SslPtr ssl(SSL_new(ctx.get()));
         if (!ssl) co_return out;
+
+        // ALPN 광고 — h2 + http/1.1. 서버가 ALPN 답하면 JA4S 에 반영.
+        constexpr unsigned char kAlpn[] = {
+            0x02, 'h', '2',
+            0x08, 'h', 't', 't', 'p', '/', '1', '.', '1'
+        };
+        SSL_set_alpn_protos(ssl.get(), kAlpn, sizeof(kAlpn));
+
+        TlsCapture cap;
+        SSL_set_msg_callback(ssl.get(), msg_capture_cb);
+        SSL_set_msg_callback_arg(ssl.get(), &cap);
 
         BIO* rbio = BIO_new(BIO_s_mem());
         BIO* wbio = BIO_new(BIO_s_mem());
@@ -112,6 +185,9 @@ public:
         const char* cname = cipher ? SSL_CIPHER_get_name(cipher) : "unknown";
         out.version = (ver ? ver : "TLS") + std::string("/") + cname;
         out.banner = out.version;
+
+        fill_fingerprints(ssl.get(), cap, out);
+
         co_return out;
     }
 };

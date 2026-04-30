@@ -20,7 +20,6 @@ spscan — CLI entry point (MVP, GUI 제외).
 #include "core/result.hpp"
 #include "core/scanner.hpp"
 #include "fp/cve_lookup.hpp"
-#include "fp/ja4.hpp"
 #include "net/async_pool.hpp"
 #include "net/rate_limiter.hpp"
 #include "probes/probe.hpp"
@@ -99,10 +98,9 @@ scan_one(asio::any_io_executor exec,
             base.service = std::move(out.service);
             base.version = std::move(out.version);
             base.banner  = std::move(out.banner);
-            if (base.service == "tls") {
-                base.ja4 = sps::fp::compute_ja4(
-                    {base.version, base.version, ""});
-            }
+            base.ja4s    = std::move(out.ja4s);
+            base.ja4x    = std::move(out.ja4x);
+            base.ja4     = base.ja4s;  // legacy mirror
             break;
         }
         // 다음 probe 를 위해 소켓 재구성.

@@ -16,6 +16,7 @@ target_include_directories(spscan_probes PUBLIC
 
 target_link_libraries(spscan_probes PUBLIC
     spscan_core
+    spscan_fp
     Boost::system
     OpenSSL::SSL
     OpenSSL::Crypto

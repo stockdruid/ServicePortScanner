@@ -26,6 +26,8 @@ struct ProbeOutcome {
     std::string service;
     std::string version;
     std::string banner;
+    std::string ja4s;    // TLS probe 가 채움 (그 외 빈 문자열)
+    std::string ja4x;    // TLS probe 가 채움 (그 외 빈 문자열)
 };
 
 class Probe {

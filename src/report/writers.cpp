@@ -66,6 +66,8 @@ std::string to_json(std::span<const sps::core::ScanResult> results) {
         item["version"] = r.version;
         item["banner"] = r.banner;
         item["ja4"] = r.ja4;
+        item["ja4s"] = r.ja4s;
+        item["ja4x"] = r.ja4x;
         nlohmann::json cves = nlohmann::json::array();
         for (const auto& c : r.cves) {
             cves.push_back({{"id", c.id}, {"cvss", c.cvss}});
