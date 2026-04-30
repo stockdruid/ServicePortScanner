@@ -19,6 +19,7 @@ spscan — CLI entry point (MVP, GUI 제외).
 #include "cli/scope_guard.hpp"
 #include "core/result.hpp"
 #include "core/scanner.hpp"
+#include "fp/cdn_lookup.hpp"
 #include "fp/cve_lookup.hpp"
 #include "net/async_pool.hpp"
 #include "net/rate_limiter.hpp"
@@ -126,6 +127,18 @@ int run(const sps::cli::Args& args) {
     }
     auto probes = sps::probes::default_probes(args.probes_db_path);
 
+    auto cdn_db = args.cdn_db_path.empty()
+        ? sps::fp::CdnDatabase::load_default()
+        : sps::fp::CdnDatabase::load_from_file(args.cdn_db_path);
+    if (cdn_db.empty() && !args.cdn_db_path.empty()) {
+        cdn_db = sps::fp::CdnDatabase::load_default();
+    }
+    const std::string cdn_provider = cdn_db.lookup(args.target);
+    if (!cdn_provider.empty()) {
+        fmt::print(stderr, "[spscan] target {} → CDN/WAF: {}\n",
+                   args.target, cdn_provider);
+    }
+
     sps::net::AsyncPool pool(args.threads);
     pool.start();
     const auto mode = args.adaptive
@@ -157,6 +170,7 @@ int run(const sps::cli::Args& args) {
         try {
             auto r = f.get();
             if (r.state == PortState::Open) ++open_count;
+            r.cdn = cdn_provider;
             results.push_back(std::move(r));
         } catch (const std::exception& e) {
             fmt::print(stderr, "[spscan] task error: {}\n", e.what());

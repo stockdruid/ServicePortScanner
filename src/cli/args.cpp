@@ -101,6 +101,8 @@ ParseResult parse(int argc, char** argv) {
                    "Path to NVD-min JSON file");
     app.add_option("--probes-db", res.args.probes_db_path,
                    "External probe rules JSON (default: embedded ssh/ftp/smtp/http)");
+    app.add_option("--cdn-db", res.args.cdn_db_path,
+                   "External CDN/WAF CIDR JSON (default: embedded Cloudflare/Fastly/...)");
     app.add_option("--threads,-j", res.args.threads,
                    "Worker threads (0 = auto)")
        ->capture_default_str();

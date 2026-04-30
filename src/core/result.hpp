@@ -32,6 +32,7 @@ struct ScanResult {
     std::string ja4;     // legacy/MVP server fingerprint (Stage 4 이후 ja4s 권장)
     std::string ja4s;    // FoxIO JA4S — TLS ServerHello fingerprint
     std::string ja4x;    // FoxIO JA4X — X.509 cert fingerprint
+    std::string cdn;     // CDN/WAF provider tag (Stage 5), 비어있으면 미식별
     std::vector<CveHit> cves;
     std::chrono::steady_clock::time_point completed_at{};
 };

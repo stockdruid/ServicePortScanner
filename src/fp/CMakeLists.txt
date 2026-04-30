@@ -5,6 +5,7 @@ add_library(spscan_fp STATIC
     ja4.cpp
     ja4_server.cpp
     ja4_x509.cpp
+    cdn_lookup.cpp
     cve_lookup.cpp
 )
 
