@@ -5,9 +5,11 @@
 #include "risk_delegate.hpp"
 #include "export_actions.hpp"
 #include "dummy_data.hpp"
+#include "settings_dialog.hpp"
 
 #include <QAbstractItemView>
 #include <QAction>
+#include <QApplication>
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QMenu>
@@ -16,6 +18,8 @@
 #include <QPushButton>
 #include <QStatusBar>
 #include <QVBoxLayout>
+
+#include <chrono>
 
 namespace sps::gui {
 
@@ -63,8 +67,13 @@ MainWindow::MainWindow(QWidget* parent)   //QWidget를 부모로 받는 생성�
 
     ui_->splitter->setSizes({800, 350});  //초기 분할 비율 설정. 왼쪽 테이블이 더 넓게 보이도록.
 
-    // ScanController — UI 스레드에서 생성. 기본 옵션(connect-only, 100 pps).
+    // ScanController — UI 스레드에서 생성. 저장된 설정(rate/timeout) 즉시 반영.
     controller_ = new ScanController(this);
+    {
+        const auto s = load_settings();
+        controller_->setRate(s.rate_pps);
+        controller_->setTimeout(std::chrono::milliseconds(s.timeout_ms));
+    }
 
     setup_delegates();    //테이블의 특정 열에 대한 delegate 설정.
     setup_connections();    //테이블 선택, export 버튼, 차트 클릭 등과 슬롯 함수를 연결.
@@ -127,7 +136,7 @@ void MainWindow::setup_connections() {
     });
 }
 
-// File 메뉴에 데모 스캔 액션 등록.
+// File / Edit 메뉴 등록.
 void MainWindow::setup_scan_menu() {
     auto* fileMenu = menuBar()->addMenu(QStringLiteral("&File"));
     auto* demoAct  = fileMenu->addAction(QStringLiteral("Scan localhost (top 10)…"));
@@ -135,6 +144,24 @@ void MainWindow::setup_scan_menu() {
     fileMenu->addSeparator();
     auto* quitAct  = fileMenu->addAction(QStringLiteral("Quit"));
     connect(quitAct, &QAction::triggered, this, &QMainWindow::close);
+
+    auto* editMenu = menuBar()->addMenu(QStringLiteral("&Edit"));
+    auto* settingsAct = editMenu->addAction(QStringLiteral("Settings…"));
+    settingsAct->setShortcut(QKeySequence::Preferences);
+    connect(settingsAct, &QAction::triggered, this, &MainWindow::open_settings);
+}
+
+// Settings 다이얼로그 — 변경 시 controller + 테마에 즉시 반영.
+void MainWindow::open_settings() {
+    SettingsDialog dlg(load_settings(), this);
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    const auto s = dlg.settings();
+    save_settings(s);
+    apply_theme(*qApp, s.theme);
+    controller_->setRate(s.rate_pps);
+    controller_->setTimeout(std::chrono::milliseconds(s.timeout_ms));
+    statusBar()->showMessage(QStringLiteral("Settings updated"), 3000);
 }
 
 // localhost top-10 포트 데모 스캔 트리거.

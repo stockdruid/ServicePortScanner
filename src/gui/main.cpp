@@ -1,24 +1,20 @@
 #include <QApplication>
+
 #include "gui/views/main_window.hpp"
+#include "gui/views/settings_dialog.hpp"
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("stockdruid"));
+    QCoreApplication::setApplicationName(QStringLiteral("spscan"));
 
-    app.setStyle("Fusion");
-    QPalette dark;
-    dark.setColor(QPalette::Window,          QColor(30, 30, 30));
-    dark.setColor(QPalette::WindowText,      QColor(220, 220, 220));
-    dark.setColor(QPalette::Base,            QColor(40, 40, 40));
-    dark.setColor(QPalette::AlternateBase,   QColor(50, 50, 50));
-    dark.setColor(QPalette::Text,            QColor(220, 220, 220));
-    dark.setColor(QPalette::Button,          QColor(50, 50, 50));
-    dark.setColor(QPalette::ButtonText,      QColor(220, 220, 220));
-    dark.setColor(QPalette::Highlight,       QColor(0, 120, 215));
-    dark.setColor(QPalette::HighlightedText, QColor(255, 255, 255));
-    app.setPalette(dark);
+    // 저장된 설정 로드 후 테마 적용. MainWindow 가 같은 설정을 다시 로드해서
+    // 컨트롤러에 rate/timeout 적용.
+    const auto initial = sps::gui::load_settings();
+    sps::gui::apply_theme(app, initial.theme);
 
     sps::gui::MainWindow w;
-    w.setWindowTitle("Service Port Scanner — Prototype");
+    w.setWindowTitle(QStringLiteral("Service Port Scanner"));
     w.resize(1200, 700);
     w.show();
 
