@@ -51,3 +51,24 @@ target_link_libraries(spscan_gui PRIVATE
 )
 
 target_compile_features(spscan_gui PRIVATE cxx_std_20)
+
+# Windows: windeployqt 가 빌드 후 Qt DLL/플러그인을 .exe 옆에 자동 복사.
+# 안 그러면 "no Qt platform plugin" 오류로 실행 불가.
+if(WIN32)
+    # vcpkg 가 설치한 windeployqt 위치(tools/Qt6/bin/) 또는 Qt 공식 인스톨러 bin/.
+    get_target_property(_qmake_exec Qt6::qmake IMPORTED_LOCATION)
+    get_filename_component(_qt_bin_dir "${_qmake_exec}" DIRECTORY)
+    find_program(WINDEPLOYQT_EXE windeployqt
+        HINTS "${_qt_bin_dir}"
+              "${_qt_bin_dir}/../../../tools/Qt6/bin"
+        REQUIRED)
+    add_custom_command(TARGET spscan_gui POST_BUILD
+        COMMAND "${WINDEPLOYQT_EXE}"
+                --release
+                --no-translations
+                --no-system-d3d-compiler
+                --no-opengl-sw
+                "$<TARGET_FILE:spscan_gui>"
+        COMMENT "Running windeployqt to bundle Qt DLLs + platform plugins"
+        VERBATIM)
+endif()
