@@ -1,13 +1,33 @@
 # Service Port Scanner
 
+[![CI](https://github.com/stockdruid/ServicePortScanner/actions/workflows/ci.yml/badge.svg)](https://github.com/stockdruid/ServicePortScanner/actions/workflows/ci.yml)
+
 C++20 + Qt6 서비스 인식 포트 스캐너. 팀 프로젝트 (7인).
 
-## 빌드 (예정)
+## 빌드
+
+CLI 만 (백엔드, 빠름):
 
 ```bash
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
-cmake --build build
+cmake -B build -S . -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+  -DVCPKG_TARGET_TRIPLET=x64-windows
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
 ```
+
+GUI 포함 (Qt6 첫 빌드 1~2시간):
+
+```bash
+cmake -B build_gui -S . -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+  -DVCPKG_TARGET_TRIPLET=x64-windows \
+  -DVCPKG_MANIFEST_FEATURES=gui \
+  -DSPSCAN_BUILD_GUI=ON
+cmake --build build_gui --parallel
+```
+
+Windows 새 머신 셋업: [`docs/BUILD-WINDOWS.md`](docs/BUILD-WINDOWS.md) 참고.
 
 ## 모듈 계획
 
