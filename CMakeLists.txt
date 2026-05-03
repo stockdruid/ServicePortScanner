@@ -56,6 +56,10 @@ target_link_libraries(spscan PRIVATE
     spscan_report
 )
 
+if(SPSCAN_BUILD_GUI)
+    add_subdirectory(src/gui)
+endif()
+
 if(SPSCAN_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)

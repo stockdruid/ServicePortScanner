@@ -14,9 +14,9 @@
   ],
   "features": {
     "gui": {
-      "description": "Qt6 GUI front-end (qtbase + qtcharts)",
+      "description": "Qt6 GUI front-end (qtbase + qtcharts) + Qt6::Test for qt_bridge_test",
       "dependencies": [
-        { "name": "qtbase",  "default-features": false, "features": ["widgets"] },
+        { "name": "qtbase",  "default-features": false, "features": ["widgets", "testlib"] },
         "qtcharts"
       ]
     },

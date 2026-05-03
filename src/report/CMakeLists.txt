@@ -2,6 +2,9 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 add_library(spscan_report STATIC
     writers.cpp
+    csv_writer.cpp
+    html_writer.cpp
+    json_writer.cpp
 )
 
 target_include_directories(spscan_report PUBLIC

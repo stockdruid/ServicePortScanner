@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DetailsPanel</class>
+ <widget class="QWidget" name="DetailsPanel">
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="margin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QTextEdit" name="textDisplay">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>350</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="placeholderText">
+      <string>← 행을 클릭하면 상세 정보가 표시됩니다</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+</ui>
