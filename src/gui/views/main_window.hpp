@@ -38,6 +38,7 @@ private:
     void setup_scan_menu();   //File 메뉴에 데모 스캔 액션 등록.
     void load_dummy_data();   //테이블에 더미 데이터를 로드하는 함수. 실제 스캔 결과가 없을 때 UI 테스트용으로 사용함.
     void start_demo_scan();   //ScanController 통한 localhost top-N 데모 스캔 트리거.
+    void open_scan_dialog();  //ScanDialog 로 임의 target/ports 입력 + scope 체크 후 스캔 시작.
     void open_settings();     //SettingsDialog 띄우고 변경 시 controller_+테마에 반영.
     void on_row_selected(const QModelIndex& current);   //선택된 행의 ScanResult를 가져와서 상세 패널과 차트 패널에 전달하는 슬롯 함수.
 };

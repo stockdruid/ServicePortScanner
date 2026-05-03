@@ -27,6 +27,8 @@ add_executable(spscan_gui
     views/scan_controller.cpp
     views/settings_dialog.hpp
     views/settings_dialog.cpp
+    views/scan_dialog.hpp
+    views/scan_dialog.cpp
     views/dummy_data.hpp
 )
 
@@ -48,6 +50,7 @@ target_link_libraries(spscan_gui PRIVATE
     spscan_probes
     spscan_fp
     spscan_report
+    spscan_cli
     Qt6::Widgets
     Qt6::Charts
 )

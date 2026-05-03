@@ -5,6 +5,7 @@
 #include "risk_delegate.hpp"
 #include "export_actions.hpp"
 #include "dummy_data.hpp"
+#include "scan_dialog.hpp"
 #include "settings_dialog.hpp"
 
 #include <QAbstractItemView>
@@ -189,7 +190,10 @@ void MainWindow::setup_connections() {
 // File / Edit 메뉴 등록.
 void MainWindow::setup_scan_menu() {
     auto* fileMenu = menuBar()->addMenu(QStringLiteral("&File"));
-    auto* demoAct  = fileMenu->addAction(QStringLiteral("Scan localhost (top 10)…"));
+    auto* scanAct  = fileMenu->addAction(QStringLiteral("New Scan…"));
+    scanAct->setShortcut(QKeySequence::New);   // Ctrl+N
+    connect(scanAct, &QAction::triggered, this, &MainWindow::open_scan_dialog);
+    auto* demoAct  = fileMenu->addAction(QStringLiteral("Scan localhost (top 10)"));
     connect(demoAct, &QAction::triggered, this, &MainWindow::start_demo_scan);
     fileMenu->addSeparator();
     auto* quitAct  = fileMenu->addAction(QStringLiteral("Quit"));
@@ -199,6 +203,22 @@ void MainWindow::setup_scan_menu() {
     auto* settingsAct = editMenu->addAction(QStringLiteral("Settings…"));
     settingsAct->setShortcut(QKeySequence::Preferences);
     connect(settingsAct, &QAction::triggered, this, &MainWindow::open_settings);
+}
+
+// 임의 target / ports 입력 다이얼로그 → scope 체크 통과 시 스캔 시작.
+void MainWindow::open_scan_dialog() {
+    if (controller_->isScanning()) {
+        QMessageBox::information(this, "Scan",
+            QStringLiteral("A scan is already in progress."));
+        return;
+    }
+    ScanDialog dlg(this);
+    if (dlg.exec() != QDialog::Accepted) return;
+    const auto req = dlg.request();
+    statusBar()->showMessage(
+        QStringLiteral("Starting scan: %1 (%2 ports)…")
+            .arg(req.target).arg(req.ports.size()));
+    controller_->startScan(req.target, req.ports);
 }
 
 // Settings 다이얼로그 — 변경 시 controller + 테마에 즉시 반영.
