@@ -14,6 +14,7 @@ public:
     //테이블의 열을 나타내는 enum(순서).
     enum Column {
         ColPort = 0,
+        ColState,
         ColService,
         ColProduct,
         ColVersion,

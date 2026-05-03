@@ -4,6 +4,20 @@
 
 namespace sps::gui {
 
+namespace {
+
+QString state_label(core::PortState s) {
+    switch (s) {
+        case core::PortState::Open:     return QStringLiteral("open");
+        case core::PortState::Closed:   return QStringLiteral("closed");
+        case core::PortState::Filtered: return QStringLiteral("filtered");
+        case core::PortState::Unknown:  return QStringLiteral("unknown");
+    }
+    return QStringLiteral("unknown");
+}
+
+} // namespace
+
 ResultModel::ResultModel(QObject* parent) //부모 객체를 QAbstractTableModel 생성자에 넘김.
         : QAbstractTableModel(parent) {}
 
@@ -23,6 +37,7 @@ QVariant ResultModel::headerData(int section, Qt::Orientation orientation,
 
         switch (static_cast<Column>(section)) {
             case ColPort:      return "Port";
+            case ColState:     return "State";
             case ColService:   return "Service";
             case ColProduct:   return "Product";
             case ColVersion:   return "Version";
@@ -50,6 +65,7 @@ QVariant ResultModel::data(const QModelIndex& index, int role) const {
         if (role == Qt::DisplayRole) {
             switch (static_cast<Column>(index.column())) {
                 case ColPort:      return r.port;
+                case ColState:     return state_label(r.state);
                 case ColService:   return QString::fromStdString(r.service.name);
                 case ColProduct:   return QString::fromStdString(r.service.product);
                 case ColVersion:   return QString::fromStdString(r.service.version);
