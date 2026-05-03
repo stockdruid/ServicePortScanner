@@ -11,7 +11,7 @@ using sps::fp::compute_ja4s;
 using sps::fp::Ja4SInput;
 using sps::fp::parse_server_hello;
 
-TEST_CASE("compute_ja4s — deterministic", "[ja4s]") {
+TEST_CASE("compute_ja4s: deterministic", "[ja4s]") {
     Ja4SInput a{};
     a.legacy_version = 0x0303;
     a.negotiated_version = 0x0304;
@@ -22,7 +22,7 @@ TEST_CASE("compute_ja4s — deterministic", "[ja4s]") {
     REQUIRE(compute_ja4s(a) == compute_ja4s(a));
 }
 
-TEST_CASE("compute_ja4s — TLS 1.3 + h2 prefix", "[ja4s]") {
+TEST_CASE("compute_ja4s: TLS 1.3 + h2 prefix", "[ja4s]") {
     Ja4SInput in{};
     in.legacy_version = 0x0303;
     in.negotiated_version = 0x0304;
@@ -35,7 +35,7 @@ TEST_CASE("compute_ja4s — TLS 1.3 + h2 prefix", "[ja4s]") {
     REQUIRE(fp.rfind("t1302h2_1301_", 0) == 0);
 }
 
-TEST_CASE("compute_ja4s — empty extensions zero hash", "[ja4s]") {
+TEST_CASE("compute_ja4s: empty extensions zero hash", "[ja4s]") {
     Ja4SInput in{};
     in.legacy_version = 0x0303;
     in.cipher_id = 0xc02f;  // ECDHE-RSA-AES128-GCM-SHA256
@@ -44,7 +44,7 @@ TEST_CASE("compute_ja4s — empty extensions zero hash", "[ja4s]") {
     REQUIRE(fp.find("_000000000000") != std::string::npos);
 }
 
-TEST_CASE("compute_ja4s — alpn 1 char prepends 0", "[ja4s]") {
+TEST_CASE("compute_ja4s: alpn 1 char prepends 0", "[ja4s]") {
     Ja4SInput in{};
     in.legacy_version = 0x0303;
     in.cipher_id = 0x1301;
@@ -52,13 +52,13 @@ TEST_CASE("compute_ja4s — alpn 1 char prepends 0", "[ja4s]") {
     REQUIRE(compute_ja4s(in).find("0h_1301_") != std::string::npos);
 }
 
-TEST_CASE("compute_ja4s — different ciphers differ", "[ja4s]") {
+TEST_CASE("compute_ja4s: different ciphers differ", "[ja4s]") {
     Ja4SInput a{}; a.cipher_id = 0x1301;
     Ja4SInput b{}; b.cipher_id = 0x1303;
     REQUIRE(compute_ja4s(a) != compute_ja4s(b));
 }
 
-TEST_CASE("parse_server_hello — minimal TLS 1.3 message", "[ja4s]") {
+TEST_CASE("parse_server_hello: minimal TLS 1.3 message", "[ja4s]") {
     // ServerHello body 손수 조립.
     std::vector<std::uint8_t> body;
     auto u8  = [&](std::uint8_t v)  { body.push_back(v); };
@@ -92,7 +92,7 @@ TEST_CASE("parse_server_hello — minimal TLS 1.3 message", "[ja4s]") {
     REQUIRE(in.extension_types[1] == 0x0033);
 }
 
-TEST_CASE("parse_server_hello — GREASE extensions excluded", "[ja4s]") {
+TEST_CASE("parse_server_hello: GREASE extensions excluded", "[ja4s]") {
     std::vector<std::uint8_t> body;
     auto u8  = [&](std::uint8_t v)  { body.push_back(v); };
     auto u16 = [&](std::uint16_t v) { u8(static_cast<std::uint8_t>(v >> 8));
@@ -120,7 +120,7 @@ TEST_CASE("parse_server_hello — GREASE extensions excluded", "[ja4s]") {
     REQUIRE(in.extension_types[0] == 0x002b);
 }
 
-TEST_CASE("parse_server_hello — too short returns empty", "[ja4s]") {
+TEST_CASE("parse_server_hello: too short returns empty", "[ja4s]") {
     std::uint8_t junk[10] = {0};
     auto in = parse_server_hello(junk, sizeof(junk));
     REQUIRE(in.cipher_id == 0);

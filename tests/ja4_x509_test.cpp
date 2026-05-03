@@ -7,7 +7,7 @@
 using sps::fp::compute_ja4x;
 using sps::fp::Ja4XInput;
 
-TEST_CASE("compute_ja4x — deterministic for same OIDs", "[ja4x]") {
+TEST_CASE("compute_ja4x: deterministic for same OIDs", "[ja4x]") {
     Ja4XInput a;
     a.issuer_oids  = {"2.5.4.6", "2.5.4.10", "2.5.4.3"};
     a.subject_oids = {"2.5.4.6", "2.5.4.3"};
@@ -16,7 +16,7 @@ TEST_CASE("compute_ja4x — deterministic for same OIDs", "[ja4x]") {
     REQUIRE(compute_ja4x(a) == compute_ja4x(a));
 }
 
-TEST_CASE("compute_ja4x — different OID order gives different hash", "[ja4x]") {
+TEST_CASE("compute_ja4x: different OID order gives different hash", "[ja4x]") {
     Ja4XInput a;
     a.issuer_oids  = {"2.5.4.6", "2.5.4.10"};
     a.subject_oids = {"2.5.4.3"};
@@ -28,13 +28,13 @@ TEST_CASE("compute_ja4x — different OID order gives different hash", "[ja4x]")
     REQUIRE(compute_ja4x(a) != compute_ja4x(b));
 }
 
-TEST_CASE("compute_ja4x — empty fields default to zeros", "[ja4x]") {
+TEST_CASE("compute_ja4x: empty fields default to zeros", "[ja4x]") {
     Ja4XInput empty;
     const auto fp = compute_ja4x(empty);
     REQUIRE(fp == "000000000000_000000000000_000000000000");
 }
 
-TEST_CASE("compute_ja4x — three underscore-separated 12-char hashes",
+TEST_CASE("compute_ja4x: three underscore-separated 12-char hashes",
           "[ja4x]") {
     Ja4XInput a;
     a.issuer_oids  = {"2.5.4.6"};

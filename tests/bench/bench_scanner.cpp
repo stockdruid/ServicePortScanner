@@ -25,7 +25,7 @@ using sps::core::PortState;
 using sps::core::ScanRequest;
 using sps::core::ScanResult;
 
-TEST_CASE("Scanner — single open port baseline", "[bench][scanner]") {
+TEST_CASE("Scanner: single open port baseline", "[bench][scanner]") {
     sps::bench::MockServer server(1);
     const auto port = server.open_ports().front();
 
@@ -41,7 +41,7 @@ TEST_CASE("Scanner — single open port baseline", "[bench][scanner]") {
     };
 }
 
-TEST_CASE("Scanner — 50 open ports concurrent", "[bench][scanner]") {
+TEST_CASE("Scanner: 50 open ports concurrent", "[bench][scanner]") {
     constexpr std::size_t N = 50;
     sps::bench::MockServer server(N);
     const auto ports = server.open_ports();
@@ -67,7 +67,7 @@ TEST_CASE("Scanner — 50 open ports concurrent", "[bench][scanner]") {
     };
 }
 
-TEST_CASE("Scanner — 200 open ports concurrent", "[bench][scanner]") {
+TEST_CASE("Scanner: 200 open ports concurrent", "[bench][scanner]") {
     constexpr std::size_t N = 200;
     sps::bench::MockServer server(N);
     const auto ports = server.open_ports();
@@ -93,7 +93,7 @@ TEST_CASE("Scanner — 200 open ports concurrent", "[bench][scanner]") {
     };
 }
 
-TEST_CASE("Scanner — closed port latency", "[bench][scanner]") {
+TEST_CASE("Scanner: closed port latency", "[bench][scanner]") {
     BENCHMARK("connect_scan one closed loopback port") {
         boost::asio::io_context io;
         auto fut = boost::asio::co_spawn(

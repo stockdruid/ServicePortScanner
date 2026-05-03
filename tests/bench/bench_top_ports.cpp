@@ -26,7 +26,7 @@ using sps::core::connect_scan;
 using sps::core::ScanRequest;
 using sps::core::ScanResult;
 
-TEST_CASE("top_n_ports — table lookup", "[bench][top_ports]") {
+TEST_CASE("top_n_ports: table lookup", "[bench][top_ports]") {
     BENCHMARK("top_n_ports(100) copy") {
         return top_n_ports(100);
     };

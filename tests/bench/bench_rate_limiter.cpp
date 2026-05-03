@@ -29,7 +29,7 @@ awaitable<void> drain(sps::net::RateLimiter& rl, int n) {
 
 } // namespace
 
-TEST_CASE("RateLimiter::acquire overhead — 1000 acquires, no wait",
+TEST_CASE("RateLimiter::acquire overhead: 1000 acquires, no wait",
           "[bench][rate_limiter]") {
     BENCHMARK("1000 acquires @ 5000 pps (cap >= n, no waiting)") {
         boost::asio::io_context io;
@@ -43,7 +43,7 @@ TEST_CASE("RateLimiter::acquire overhead — 1000 acquires, no wait",
     };
 }
 
-TEST_CASE("RateLimiter adaptive — converges down on 10% loss",
+TEST_CASE("RateLimiter adaptive: converges down on 10% loss",
           "[bench][rate_limiter]") {
     boost::asio::io_context io;
     sps::net::RateLimiter rl{io.get_executor(),
@@ -61,7 +61,7 @@ TEST_CASE("RateLimiter adaptive — converges down on 10% loss",
     REQUIRE(rl.rate() < 1000.0);
 }
 
-TEST_CASE("RateLimiter adaptive — converges up on clean network",
+TEST_CASE("RateLimiter adaptive: converges up on clean network",
           "[bench][rate_limiter]") {
     boost::asio::io_context io;
     sps::net::RateLimiter rl{io.get_executor(),
@@ -77,7 +77,7 @@ TEST_CASE("RateLimiter adaptive — converges up on clean network",
     REQUIRE(rl.rate() > 1000.0);
 }
 
-TEST_CASE("RateLimiter adaptive — SRTT/RTTVAR tracking sanity",
+TEST_CASE("RateLimiter adaptive: SRTT/RTTVAR tracking sanity",
           "[bench][rate_limiter]") {
     boost::asio::io_context io;
     sps::net::RateLimiter rl{io.get_executor(), 1000.0, 1000.0,
