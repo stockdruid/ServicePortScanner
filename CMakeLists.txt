@@ -41,6 +41,7 @@ add_subdirectory(src/core)
 add_subdirectory(src/net)
 add_subdirectory(src/fp)
 add_subdirectory(src/probes)
+add_subdirectory(src/scan)
 add_subdirectory(src/cli)
 add_subdirectory(src/report)
 
@@ -52,6 +53,7 @@ target_link_libraries(spscan PRIVATE
     spscan_net
     spscan_probes
     spscan_fp
+    spscan_scan
     spscan_cli
     spscan_report
 )

@@ -49,6 +49,7 @@ target_link_libraries(spscan_gui PRIVATE
     spscan_qt_bridge
     spscan_probes
     spscan_fp
+    spscan_scan
     spscan_report
     spscan_cli
     Qt6::Widgets
