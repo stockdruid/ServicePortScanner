@@ -24,7 +24,7 @@ spscan — CLI entry point (MVP, GUI 제외).
 #include "fp/epss_lookup.hpp"
 #include "net/async_pool.hpp"
 #include "net/rate_limiter.hpp"
-#include "probes/probe.hpp"
+#include "probes/probe_variant.hpp"
 #include "report/writers.hpp"
 
 #include <boost/asio/co_spawn.hpp>
@@ -42,6 +42,7 @@ spscan — CLI entry point (MVP, GUI 제외).
 #include <future>
 #include <iostream>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -52,13 +53,14 @@ using sps::core::ScanRequest;
 using sps::core::ScanResult;
 
 // 한 포트 처리: rate-limit → connect → (optional) probe → CVE lookup.
+// Stage 7: probes 를 ProbeVariant 컨테이너로 받아 std::visit dispatch.
 asio::awaitable<ScanResult>
 scan_one(asio::any_io_executor exec,
          std::string host,
          std::uint16_t port,
          std::chrono::milliseconds timeout,
          sps::net::RateLimiter& limiter,
-         const std::vector<sps::probes::ProbePtr>* probes,
+         const std::vector<sps::probes::ProbeVariant>* probes,
          const sps::fp::CveDb* cves) {
     co_await limiter.acquire();
 
@@ -89,13 +91,17 @@ scan_one(asio::any_io_executor exec,
                                   asio::redirect_error(asio::use_awaitable, ec));
     if (ec) co_return base;
 
-    for (const auto& p : *probes) {
-        const auto hints = p->hint_ports();
+    for (auto& probe : *probes) {
+        const auto hints = std::visit(
+            [](const auto& p) { return p.hint_ports(); }, probe);
         const bool match_hint = hints.empty() ||
             std::find(hints.begin(), hints.end(), port) != hints.end();
         if (!match_hint) continue;
 
-        auto out = co_await p->identify(sock, timeout);
+        auto out = co_await std::visit(
+            [&sock, timeout](auto& p) -> asio::awaitable<sps::probes::ProbeOutcome> {
+                return p.identify(sock, timeout);
+            }, probe);
         if (out.matched) {
             base.service.name       = std::move(out.service);
             base.service.version    = std::move(out.version);

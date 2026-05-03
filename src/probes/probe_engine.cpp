@@ -93,45 +93,7 @@ std::string apply_template(const std::string& tpl, const std::smatch& m) {
     return out;
 }
 
-class JsonProbe final : public Probe {
-public:
-    explicit JsonProbe(ProbeRule rule) : rule_{std::move(rule)} {}
-
-    std::string_view name() const noexcept override { return rule_.name; }
-    std::vector<std::uint16_t> hint_ports() const override { return rule_.ports; }
-
-    boost::asio::awaitable<ProbeOutcome>
-    identify(boost::asio::ip::tcp::socket& sock,
-             std::chrono::milliseconds timeout) override {
-        ProbeOutcome out;
-
-        if (!rule_.send_payload.empty()) {
-            const bool wrote = co_await detail::write_all(
-                sock, rule_.send_payload, timeout);
-            if (!wrote) co_return out;
-        }
-
-        std::string banner;
-        const bool read = co_await detail::read_until_quiet(
-            sock, banner, timeout, kMaxBannerBytes);
-        if (!read || banner.empty()) co_return out;
-
-        for (const auto& mr : rule_.matches) {
-            std::smatch m;
-            if (!std::regex_search(banner, m, mr.re)) continue;
-            out.matched = true;
-            out.service = apply_template(mr.service_template, m);
-            out.version = apply_template(mr.version_template, m);
-            out.banner = banner.substr(
-                0, std::min<std::size_t>(banner.size(), 1024));
-            co_return out;
-        }
-        co_return out;
-    }
-
-private:
-    ProbeRule rule_;
-};
+// JsonProbe 클래스는 probe_engine.hpp 에 선언. 여기는 method 구현.
 
 bool parse_match(const nlohmann::json& j, MatchRule& out) {
     if (!j.contains("regex") || !j["regex"].is_string()) return false;
@@ -208,11 +170,48 @@ ProbeDatabase ProbeDatabase::load_from_file(const std::string& path) {
     return parse(oss.str());
 }
 
-std::vector<ProbePtr> probes_from_database(const ProbeDatabase& db) {
-    std::vector<ProbePtr> out;
+// ===== JsonProbe method 구현 =====
+
+JsonProbe::JsonProbe(ProbeRule rule) noexcept : rule_{std::move(rule)} {}
+
+std::string_view JsonProbe::name() const noexcept { return rule_.name; }
+
+std::vector<std::uint16_t> JsonProbe::hint_ports() const { return rule_.ports; }
+
+boost::asio::awaitable<ProbeOutcome>
+JsonProbe::identify(boost::asio::ip::tcp::socket& sock,
+                    std::chrono::milliseconds timeout) const {
+    ProbeOutcome out;
+
+    if (!rule_.send_payload.empty()) {
+        const bool wrote = co_await detail::write_all(
+            sock, rule_.send_payload, timeout);
+        if (!wrote) co_return out;
+    }
+
+    std::string banner;
+    const bool read = co_await detail::read_until_quiet(
+        sock, banner, timeout, kMaxBannerBytes);
+    if (!read || banner.empty()) co_return out;
+
+    for (const auto& mr : rule_.matches) {
+        std::smatch m;
+        if (!std::regex_search(banner, m, mr.re)) continue;
+        out.matched = true;
+        out.service = apply_template(mr.service_template, m);
+        out.version = apply_template(mr.version_template, m);
+        out.banner = banner.substr(
+            0, std::min<std::size_t>(banner.size(), 1024));
+        co_return out;
+    }
+    co_return out;
+}
+
+std::vector<JsonProbe> json_probes_from_database(const ProbeDatabase& db) {
+    std::vector<JsonProbe> out;
     out.reserve(db.size());
     for (const auto& rule : db.rules()) {
-        out.push_back(std::make_unique<JsonProbe>(rule));
+        out.emplace_back(rule);
     }
     return out;
 }

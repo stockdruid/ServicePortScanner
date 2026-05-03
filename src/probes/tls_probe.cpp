@@ -1,7 +1,7 @@
 #include "fp/ja4_server.hpp"
 #include "fp/ja4_x509.hpp"
 #include "probes/banner_io.hpp"
-#include "probes/probe.hpp"
+#include "probes/tls_probe.hpp"
 
 #include <openssl/err.h>
 #include <openssl/ssl.h>
@@ -134,66 +134,59 @@ void fill_fingerprints(SSL* ssl, const TlsCapture& cap, ProbeOutcome& out) {
     }
 }
 
-class TlsProbe final : public Probe {
-public:
-    std::string_view name() const noexcept override { return "tls"; }
-    std::vector<std::uint16_t> hint_ports() const override {
-        return {443, 8443, 465, 993, 995};
-    }
-
-    boost::asio::awaitable<ProbeOutcome>
-    identify(asio::ip::tcp::socket& sock,
-             std::chrono::milliseconds timeout) override {
-        ProbeOutcome out;
-
-        SslCtxPtr ctx(SSL_CTX_new(TLS_client_method()));
-        if (!ctx) co_return out;
-        SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
-        SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_NONE, nullptr);
-
-        SslPtr ssl(SSL_new(ctx.get()));
-        if (!ssl) co_return out;
-
-        // ALPN 광고 — h2 + http/1.1. 서버가 ALPN 답하면 JA4S 에 반영.
-        constexpr unsigned char kAlpn[] = {
-            0x02, 'h', '2',
-            0x08, 'h', 't', 't', 'p', '/', '1', '.', '1'
-        };
-        SSL_set_alpn_protos(ssl.get(), kAlpn, sizeof(kAlpn));
-
-        TlsCapture cap;
-        SSL_set_msg_callback(ssl.get(), msg_capture_cb);
-        SSL_set_msg_callback_arg(ssl.get(), &cap);
-
-        BIO* rbio = BIO_new(BIO_s_mem());
-        BIO* wbio = BIO_new(BIO_s_mem());
-        if (!rbio || !wbio) {
-            if (rbio) BIO_free(rbio);
-            if (wbio) BIO_free(wbio);
-            co_return out;
-        }
-        SSL_set_bio(ssl.get(), rbio, wbio);  // SSL takes ownership.
-        SSL_set_connect_state(ssl.get());
-
-        const bool ok = co_await drive_handshake(sock, ssl.get(), rbio, wbio, timeout);
-        if (!ok) co_return out;
-
-        out.matched = true;
-        out.service = "tls";
-        const char* ver = SSL_get_version(ssl.get());
-        const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl.get());
-        const char* cname = cipher ? SSL_CIPHER_get_name(cipher) : "unknown";
-        out.version = (ver ? ver : "TLS") + std::string("/") + cname;
-        out.banner = out.version;
-
-        fill_fingerprints(ssl.get(), cap, out);
-
-        co_return out;
-    }
-};
-
 } // namespace
 
-ProbePtr make_tls_probe() { return std::make_unique<TlsProbe>(); }
+// TlsProbe 메서드 — 클래스 선언은 tls_probe.hpp.
+// 익명 namespace 의 헬퍼(SslCtxPtr/SslPtr/TlsCapture/msg_capture_cb/
+// drive_handshake/fill_fingerprints) 는 같은 TU 안이라 접근 가능.
+boost::asio::awaitable<ProbeOutcome>
+TlsProbe::identify(boost::asio::ip::tcp::socket& sock,
+                   std::chrono::milliseconds timeout) const {
+    ProbeOutcome out;
+
+    SslCtxPtr ctx(SSL_CTX_new(TLS_client_method()));
+    if (!ctx) co_return out;
+    SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_NONE, nullptr);
+
+    SslPtr ssl(SSL_new(ctx.get()));
+    if (!ssl) co_return out;
+
+    // ALPN 광고 — h2 + http/1.1. 서버가 ALPN 답하면 JA4S 에 반영.
+    constexpr unsigned char kAlpn[] = {
+        0x02, 'h', '2',
+        0x08, 'h', 't', 't', 'p', '/', '1', '.', '1'
+    };
+    SSL_set_alpn_protos(ssl.get(), kAlpn, sizeof(kAlpn));
+
+    TlsCapture cap;
+    SSL_set_msg_callback(ssl.get(), msg_capture_cb);
+    SSL_set_msg_callback_arg(ssl.get(), &cap);
+
+    BIO* rbio = BIO_new(BIO_s_mem());
+    BIO* wbio = BIO_new(BIO_s_mem());
+    if (!rbio || !wbio) {
+        if (rbio) BIO_free(rbio);
+        if (wbio) BIO_free(wbio);
+        co_return out;
+    }
+    SSL_set_bio(ssl.get(), rbio, wbio);  // SSL takes ownership.
+    SSL_set_connect_state(ssl.get());
+
+    const bool ok = co_await drive_handshake(sock, ssl.get(), rbio, wbio, timeout);
+    if (!ok) co_return out;
+
+    out.matched = true;
+    out.service = "tls";
+    const char* ver = SSL_get_version(ssl.get());
+    const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl.get());
+    const char* cname = cipher ? SSL_CIPHER_get_name(cipher) : "unknown";
+    out.version = (ver ? ver : "TLS") + std::string("/") + cname;
+    out.banner = out.version;
+
+    fill_fingerprints(ssl.get(), cap, out);
+
+    co_return out;
+}
 
 } // namespace sps::probes

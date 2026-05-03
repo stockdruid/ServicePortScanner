@@ -14,6 +14,7 @@
 #include <chrono>
 #include <future>
 #include <utility>
+#include <variant>
 
 namespace sps::gui {
 
@@ -26,13 +27,16 @@ namespace {
 
 // CLI main.cpp 의 scan_one 과 동일 로직. 추후 src/core/scan_pipeline 으로
 // 추출 예정 (현재는 의도적 중복 — 통합 변동 최소화).
+//
+// Stage 7: probes 를 unique_ptr<Probe>* 가 아닌 ProbeVariant* 로 받음.
+// 디스패치는 std::visit + generic lambda — 가상 호출 없음.
 asio::awaitable<ScanResult>
 scan_one(asio::any_io_executor exec,
          std::string host,
          std::uint16_t port,
          std::chrono::milliseconds timeout,
          sps::net::RateLimiter& limiter,
-         const std::vector<sps::probes::ProbePtr>* probes,
+         const std::vector<sps::probes::ProbeVariant>* probes,
          const sps::fp::CveDb* cves) {
     co_await limiter.acquire();
 
@@ -61,13 +65,17 @@ scan_one(asio::any_io_executor exec,
                                   asio::redirect_error(asio::use_awaitable, ec));
     if (ec) co_return base;
 
-    for (const auto& p : *probes) {
-        const auto hints = p->hint_ports();
+    for (auto& probe : *probes) {
+        const auto hints = std::visit(
+            [](const auto& p) { return p.hint_ports(); }, probe);
         const bool match_hint = hints.empty() ||
             std::find(hints.begin(), hints.end(), port) != hints.end();
         if (!match_hint) continue;
 
-        auto out = co_await p->identify(sock, timeout);
+        auto out = co_await std::visit(
+            [&sock, timeout](auto& p) -> asio::awaitable<sps::probes::ProbeOutcome> {
+                return p.identify(sock, timeout);
+            }, probe);
         if (out.matched) {
             base.service.name       = std::move(out.service);
             base.service.version    = std::move(out.version);
@@ -109,7 +117,7 @@ ScanController::~ScanController() {
     if (worker_.joinable()) worker_.join();
 }
 
-void ScanController::setProbes(std::vector<sps::probes::ProbePtr> p) {
+void ScanController::setProbes(std::vector<sps::probes::ProbeVariant> p) {
     probes_ = std::move(p);
 }
 void ScanController::setCveDb(sps::fp::CveDb db) {

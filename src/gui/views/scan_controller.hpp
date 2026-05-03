@@ -26,7 +26,7 @@
 #include "fp/cve_lookup.hpp"
 #include "fp/epss_lookup.hpp"
 #include "net/qt_bridge.hpp"
-#include "probes/probe.hpp"
+#include "probes/probe_variant.hpp"
 
 namespace sps::gui {
 
@@ -40,7 +40,7 @@ public:
     ScanController& operator=(const ScanController&) = delete;
 
     // 옵션 — startScan 호출 전에 설정. probe/CVE DB 가 비면 connect-only 스캔.
-    void setProbes(std::vector<sps::probes::ProbePtr> p);
+    void setProbes(std::vector<sps::probes::ProbeVariant> p);
     void setCveDb(sps::fp::CveDb db);
     void setEpssDb(sps::fp::EpssDb db);
     void setCdnDb(sps::fp::CdnDatabase db);
@@ -65,7 +65,7 @@ private:
                  std::vector<std::uint16_t> ports);
 
     sps::net::QtBridge*  bridge_ = nullptr;   // Qt parent 소유
-    std::vector<sps::probes::ProbePtr> probes_;
+    std::vector<sps::probes::ProbeVariant> probes_;
     sps::fp::CveDb       cves_;
     sps::fp::EpssDb      epss_;
     sps::fp::CdnDatabase cdn_;
