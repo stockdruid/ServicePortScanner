@@ -1,5 +1,6 @@
 #include "fp/cve_lookup.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 using sps::fp::CveDb;
@@ -27,8 +28,9 @@ TEST_CASE("matches by version prefix substring", "[cve]") {
     REQUIRE(db.size() == 2);
     auto hits = db.lookup("openssh", "OpenSSH_7.4p1");
     REQUIRE(hits.size() == 1);
-    REQUIRE(hits[0].id == "CVE-2018-15473");
-    REQUIRE(hits[0].cvss == 5.3);
+    REQUIRE(hits[0].cve_id == "CVE-2018-15473");
+    REQUIRE(hits[0].cvss_score == Catch::Approx(5.3f));
+    REQUIRE(hits[0].severity == sps::core::Severity::Medium);
 }
 
 TEST_CASE("case-insensitive service", "[cve]") {

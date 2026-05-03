@@ -97,12 +97,11 @@ scan_one(asio::any_io_executor exec,
 
         auto out = co_await p->identify(sock, timeout);
         if (out.matched) {
-            base.service = std::move(out.service);
-            base.version = std::move(out.version);
-            base.banner  = std::move(out.banner);
-            base.ja4s    = std::move(out.ja4s);
-            base.ja4x    = std::move(out.ja4x);
-            base.ja4     = base.ja4s;  // legacy mirror
+            base.service.name       = std::move(out.service);
+            base.service.version    = std::move(out.version);
+            base.service.banner_raw = std::move(out.banner);
+            base.ja4s = std::move(out.ja4s);
+            base.ja4x = std::move(out.ja4x);
             break;
         }
         // 다음 probe 를 위해 소켓 재구성.
@@ -114,8 +113,8 @@ scan_one(asio::any_io_executor exec,
     }
     sock.close(ec);
 
-    if (cves && !cves->empty() && !base.service.empty() && !base.version.empty()) {
-        base.cves = cves->lookup(base.service, base.version);
+    if (cves && !cves->empty() && !base.service.name.empty() && !base.service.version.empty()) {
+        base.cves = cves->lookup(base.service.name, base.service.version);
     }
     co_return base;
 }
@@ -180,7 +179,7 @@ int run(const sps::cli::Args& args) {
             r.cdn = cdn_provider;
             if (!epss.empty()) {
                 for (auto& hit : r.cves) {
-                    const auto e = epss.lookup(hit.id);
+                    const auto e = epss.lookup(hit.cve_id);
                     hit.epss = e.epss;
                     hit.percentile = e.percentile;
                 }
@@ -206,7 +205,7 @@ int run(const sps::cli::Args& args) {
         for (const auto& r : results) {
             if (r.state != PortState::Open) continue;
             fmt::print("{:>5}/tcp  open  {} {}\n",
-                       r.port, r.service, r.version);
+                       r.port, r.service.name, r.service.version);
         }
         return 0;
     }

@@ -46,10 +46,10 @@ do_connect(asio::any_io_executor exec, const ScanRequest& req) {
 
 ScanResult make_result(const ScanRequest& req, PortState st) {
     ScanResult r;
-    r.host = req.host;
+    r.target_host = req.host;
     r.port = req.port;
     r.state = st;
-    r.completed_at = std::chrono::steady_clock::now();
+    r.timestamp = std::chrono::system_clock::now();
     return r;
 }
 

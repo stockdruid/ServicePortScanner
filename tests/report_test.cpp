@@ -5,7 +5,7 @@
 
 #include <vector>
 
-using sps::core::CveHit;
+using sps::core::CveInfo;
 using sps::core::PortState;
 using sps::core::ScanResult;
 
@@ -13,13 +13,17 @@ namespace {
 
 std::vector<ScanResult> sample() {
     ScanResult r;
-    r.host = "127.0.0.1";
+    r.target_host = "127.0.0.1";
     r.port = 22;
     r.state = PortState::Open;
-    r.service = "ssh";
-    r.version = "OpenSSH_7.4";
-    r.banner = "SSH-2.0-OpenSSH_7.4\r\n";
-    r.cves.push_back({"CVE-2018-15473", 5.3});
+    r.service.name       = "ssh";
+    r.service.version    = "OpenSSH_7.4";
+    r.service.banner_raw = "SSH-2.0-OpenSSH_7.4\r\n";
+    CveInfo c;
+    c.cve_id     = "CVE-2018-15473";
+    c.cvss_score = 5.3f;
+    c.severity   = sps::core::severity_from_cvss(c.cvss_score);
+    r.cves.push_back(std::move(c));
     return {r};
 }
 
@@ -44,7 +48,7 @@ TEST_CASE("csv has header and row", "[report]") {
 
 TEST_CASE("csv quotes fields with commas", "[report]") {
     ScanResult r;
-    r.host = "h,with,commas";
+    r.target_host = "h,with,commas";
     r.port = 1;
     r.state = PortState::Open;
     auto csv = sps::report::to_csv(std::vector<ScanResult>{r});
@@ -53,10 +57,10 @@ TEST_CASE("csv quotes fields with commas", "[report]") {
 
 TEST_CASE("html escapes injection attempts", "[report]") {
     ScanResult r;
-    r.host = "<script>alert(1)</script>";
+    r.target_host = "<script>alert(1)</script>";
     r.port = 80;
     r.state = PortState::Open;
-    r.service = "http";
+    r.service.name = "http";
     auto html = sps::report::to_html(std::vector<ScanResult>{r});
     REQUIRE(html.find("<script>alert") == std::string::npos);
     REQUIRE(html.find("&lt;script&gt;") != std::string::npos);

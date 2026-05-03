@@ -17,10 +17,10 @@ TEST_CASE("QtBridge: postResult from worker reaches main thread", "[qt_bridge]")
 
     std::thread worker([&] {
         ScanResult r;
-        r.host = "127.0.0.1";
+        r.target_host = "127.0.0.1";
         r.port = 22;
         r.state = PortState::Open;
-        r.service = "ssh";
+        r.service.name = "ssh";
         bridge.postResult(r);
     });
     worker.join();
@@ -32,7 +32,7 @@ TEST_CASE("QtBridge: postResult from worker reaches main thread", "[qt_bridge]")
     const auto args = spy.takeFirst();
     const auto r = args.at(0).value<ScanResult>();
     REQUIRE(r.port == 22);
-    REQUIRE(r.service == "ssh");
+    REQUIRE(r.service.name == "ssh");
     REQUIRE(r.state == PortState::Open);
 }
 
@@ -75,7 +75,7 @@ TEST_CASE("QtBridge: many posts from multiple workers", "[qt_bridge]") {
         ts.emplace_back([&bridge, w] {
             for (int i = 0; i < kPerWorker; ++i) {
                 ScanResult r;
-                r.host = "10.0.0.1";
+                r.target_host = "10.0.0.1";
                 r.port = static_cast<std::uint16_t>(w * 1000 + i);
                 bridge.postResult(r);
             }

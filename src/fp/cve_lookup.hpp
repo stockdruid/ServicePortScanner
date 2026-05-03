@@ -28,7 +28,7 @@ public:
     static CveDb load_from_string(std::string_view json_text);
 
     // 빈 결과 = 매칭 없음.
-    std::vector<sps::core::CveHit>
+    std::vector<sps::core::CveInfo>
     lookup(std::string_view service, std::string_view version) const;
 
     bool empty() const noexcept { return entries_.empty(); }

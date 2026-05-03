@@ -59,26 +59,28 @@ std::string to_json(std::span<const sps::core::ScanResult> results) {
     nlohmann::json arr = nlohmann::json::array();
     for (const auto& r : results) {
         nlohmann::json item;
-        item["host"] = r.host;
+        item["host"] = r.target_host;
         item["port"] = r.port;
         item["state"] = state_str(r.state);
-        item["service"] = r.service;
-        item["version"] = r.version;
-        item["banner"] = r.banner;
-        item["ja4"] = r.ja4;
+        item["service"] = r.service.name;
+        item["product"] = r.service.product;
+        item["version"] = r.service.version;
+        item["banner"] = r.service.banner_raw;
         item["ja4s"] = r.ja4s;
         item["ja4x"] = r.ja4x;
         item["cdn"] = r.cdn;
+        item["os_guess"] = r.os_guess;
         nlohmann::json cves = nlohmann::json::array();
         for (const auto& c : r.cves) {
-            // risk = CVSS × EPSS — 발표·정렬용 파생값 (0..10).
-            const double risk = c.cvss * c.epss;
+            // risk = CVSS × EPSS — 발표·정렬용 파생값.
+            const double risk = static_cast<double>(c.cvss_score) * c.epss;
             cves.push_back({
-                {"id", c.id},
-                {"cvss", c.cvss},
+                {"id", c.cve_id},
+                {"cvss", c.cvss_score},
                 {"epss", c.epss},
                 {"percentile", c.percentile},
-                {"risk", risk}
+                {"risk", risk},
+                {"nuclei_verified", c.nuclei_verified}
             });
         }
         item["cves"] = std::move(cves);
@@ -92,15 +94,15 @@ std::string to_csv(std::span<const sps::core::ScanResult> results) {
     ss << "host,port,state,service,version,top_cve,top_cvss\n";
     for (const auto& r : results) {
         std::string top_id;
-        double top_cvss = 0;
+        float top_cvss = 0;
         for (const auto& c : r.cves) {
-            if (c.cvss > top_cvss) { top_cvss = c.cvss; top_id = c.id; }
+            if (c.cvss_score > top_cvss) { top_cvss = c.cvss_score; top_id = c.cve_id; }
         }
-        ss << escape_csv_field(r.host) << ','
+        ss << escape_csv_field(r.target_host) << ','
            << r.port << ','
            << state_str(r.state) << ','
-           << escape_csv_field(r.service) << ','
-           << escape_csv_field(r.version) << ','
+           << escape_csv_field(r.service.name) << ','
+           << escape_csv_field(r.service.version) << ','
            << escape_csv_field(top_id) << ','
            << top_cvss << '\n';
     }
@@ -124,20 +126,20 @@ std::string to_html(std::span<const sps::core::ScanResult> results) {
           "</tr></thead><tbody>";
     for (const auto& r : results) {
         std::string top_id;
-        double top_cvss = 0;
+        float top_cvss = 0;
         for (const auto& c : r.cves) {
-            if (c.cvss > top_cvss) { top_cvss = c.cvss; top_id = c.id; }
+            if (c.cvss_score > top_cvss) { top_cvss = c.cvss_score; top_id = c.cve_id; }
         }
         const char* row_class =
-            (top_cvss >= 9.0) ? "crit" :
-            (top_cvss >= 7.0) ? "high" :
-            (top_cvss >= 4.0) ? "med"  : "";
+            (top_cvss >= 9.0f) ? "crit" :
+            (top_cvss >= 7.0f) ? "high" :
+            (top_cvss >= 4.0f) ? "med"  : "";
         ss << "<tr class='" << row_class << "'>"
-           << "<td>" << escape_html(r.host) << "</td>"
+           << "<td>" << escape_html(r.target_host) << "</td>"
            << "<td>" << r.port << "</td>"
            << "<td>" << state_str(r.state) << "</td>"
-           << "<td>" << escape_html(r.service) << "</td>"
-           << "<td>" << escape_html(r.version) << "</td>"
+           << "<td>" << escape_html(r.service.name) << "</td>"
+           << "<td>" << escape_html(r.service.version) << "</td>"
            << "<td>" << escape_html(top_id) << "</td>"
            << "<td>" << top_cvss << "</td>"
            << "</tr>";

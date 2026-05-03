@@ -64,15 +64,19 @@ CveDb CveDb::load_from_string(std::string_view json_text) {
     return db;
 }
 
-std::vector<sps::core::CveHit>
+std::vector<sps::core::CveInfo>
 CveDb::lookup(std::string_view service, std::string_view version) const {
-    std::vector<sps::core::CveHit> hits;
+    std::vector<sps::core::CveInfo> hits;
     if (service.empty() || version.empty()) return hits;
     const std::string svc = to_lower(service);
     for (const auto& e : entries_) {
         if (e.service_lower != svc) continue;
         if (!version_matches(version, e.version_prefix)) continue;
-        hits.push_back({e.id, e.cvss});
+        sps::core::CveInfo hit;
+        hit.cve_id     = e.id;
+        hit.cvss_score = static_cast<float>(e.cvss);
+        hit.severity   = sps::core::severity_from_cvss(e.cvss);
+        hits.push_back(std::move(hit));
     }
     return hits;
 }
