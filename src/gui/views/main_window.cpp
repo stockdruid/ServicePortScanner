@@ -10,6 +10,7 @@
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
+#include <QFile>
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QMenu>
@@ -20,8 +21,32 @@
 #include <QVBoxLayout>
 
 #include <chrono>
+#include <filesystem>
 
 namespace sps::gui {
+
+namespace {
+
+// data/<filename> 을 다음 순서로 찾음:
+//  1. CWD/data/  (개발 시 repo root 에서 실행)
+//  2. exe/../../../data/  (build_gui/src/gui/ 에서 실행 — 개발 빌드)
+//  3. exe/data/  (배포 시 .exe 옆에 data/ 디렉토리 동봉)
+// 못 찾으면 빈 path 반환 — DB 로더가 알아서 빈 결과 처리.
+std::filesystem::path find_data_path(const QString& filename) {
+    const QStringList candidates = {
+        QStringLiteral("data/") + filename,
+        QApplication::applicationDirPath() + QStringLiteral("/../../../data/") + filename,
+        QApplication::applicationDirPath() + QStringLiteral("/data/") + filename,
+    };
+    for (const auto& path : candidates) {
+        if (QFile::exists(path)) {
+            return std::filesystem::path(path.toStdString());
+        }
+    }
+    return {};
+}
+
+} // namespace
 
 MainWindow::MainWindow(QWidget* parent)   //QWidget를 부모로 받는 생성자임.
     : QMainWindow(parent), ui_(new Ui::MainWindow)      
@@ -73,6 +98,31 @@ MainWindow::MainWindow(QWidget* parent)   //QWidget를 부모로 받는 생성�
         const auto s = load_settings();
         controller_->setRate(s.rate_pps);
         controller_->setTimeout(std::chrono::milliseconds(s.timeout_ms));
+    }
+
+    // 백엔드 DB 자동 주입.
+    // - probes: data/probes.json 발견 시 외부 DB, 아니면 임베디드 폴백 (HTTP/SSH/FTP/SMTP/TLS).
+    // - cve / epss: data/ 파일 발견 시만 활성화 (없으면 connect-only + service 식별만).
+    // - cdn: 내장 CIDR DB 항상 사용 (Cloudflare/Fastly/Akamai 등).
+    {
+        const auto probes_path = find_data_path(QStringLiteral("probes.json"));
+        controller_->setProbes(sps::probes::default_probes(probes_path.string()));
+        controller_->setCdnDb(sps::fp::CdnDatabase::load_default());
+
+        QStringList loaded;
+        loaded << QStringLiteral("probes")
+               << QStringLiteral("CDN");
+
+        if (auto p = find_data_path(QStringLiteral("nvd_min.json")); !p.empty()) {
+            controller_->setCveDb(sps::fp::CveDb::load(p));
+            loaded << QStringLiteral("CVE");
+        }
+        if (auto p = find_data_path(QStringLiteral("epss_min.csv")); !p.empty()) {
+            controller_->setEpssDb(sps::fp::EpssDb::load(p));
+            loaded << QStringLiteral("EPSS");
+        }
+        statusBar()->showMessage(
+            QStringLiteral("Loaded: %1").arg(loaded.join(", ")), 5000);
     }
 
     setup_delegates();    //테이블의 특정 열에 대한 delegate 설정.
