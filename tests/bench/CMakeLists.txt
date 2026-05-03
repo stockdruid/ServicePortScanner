@@ -6,6 +6,7 @@ add_executable(spscan_bench
     bench_rate_limiter.cpp
     bench_scanner.cpp
     bench_top_ports.cpp
+    bench_alloc_profile.cpp
 )
 
 target_include_directories(spscan_bench PRIVATE
@@ -16,6 +17,7 @@ target_link_libraries(spscan_bench PRIVATE
     spscan_core
     spscan_net
     spscan_cli
+    spscan_fp
     Catch2::Catch2WithMain
 )
 

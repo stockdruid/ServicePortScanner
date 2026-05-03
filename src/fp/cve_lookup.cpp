@@ -69,6 +69,19 @@ CveDb::lookup(std::string_view service, std::string_view version) const {
     std::vector<sps::core::CveInfo> hits;
     if (service.empty() || version.empty()) return hits;
     const std::string svc = to_lower(service);
+
+    // Stage 7: 두-패스 — 정확히 한 번 만 alloc.
+    // 첫 패스에서 매칭 카운트 → reserve → 두 번째 패스에서 push.
+    // entries_ 는 보통 수십 개 수준이라 cache 에 머물러 추가 traverse 비용 무시.
+    std::size_t count = 0;
+    for (const auto& e : entries_) {
+        if (e.service_lower != svc) continue;
+        if (!version_matches(version, e.version_prefix)) continue;
+        ++count;
+    }
+    if (count == 0) return hits;
+    hits.reserve(count);
+
     for (const auto& e : entries_) {
         if (e.service_lower != svc) continue;
         if (!version_matches(version, e.version_prefix)) continue;
