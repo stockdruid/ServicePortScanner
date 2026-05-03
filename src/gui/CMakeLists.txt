@@ -23,6 +23,8 @@ add_executable(spscan_gui
     views/risk_delegate.cpp
     views/export_actions.hpp
     views/export_actions.cpp
+    views/scan_controller.hpp
+    views/scan_controller.cpp
     views/dummy_data.hpp
 )
 
@@ -39,6 +41,10 @@ target_include_directories(spscan_gui PRIVATE
 
 target_link_libraries(spscan_gui PRIVATE
     spscan_core
+    spscan_net
+    spscan_qt_bridge
+    spscan_probes
+    spscan_fp
     spscan_report
     Qt6::Widgets
     Qt6::Charts

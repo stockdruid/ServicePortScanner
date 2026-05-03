@@ -7,9 +7,14 @@
 #include "dummy_data.hpp"
 
 #include <QAbstractItemView>
+#include <QAction>
 #include <QHeaderView>
 #include <QItemSelectionModel>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
 #include <QPushButton>
+#include <QStatusBar>
 #include <QVBoxLayout>
 
 namespace sps::gui {
@@ -58,11 +63,15 @@ MainWindow::MainWindow(QWidget* parent)   //QWidget를 부모로 받는 생성�
 
     ui_->splitter->setSizes({800, 350});  //초기 분할 비율 설정. 왼쪽 테이블이 더 넓게 보이도록.
 
+    // ScanController — UI 스레드에서 생성. 기본 옵션(connect-only, 100 pps).
+    controller_ = new ScanController(this);
+
     setup_delegates();    //테이블의 특정 열에 대한 delegate 설정.
     setup_connections();    //테이블 선택, export 버튼, 차트 클릭 등과 슬롯 함수를 연결.
+    setup_scan_menu();    //File 메뉴에 데모 스캔 액션 등록.
     //일단 더미 데이터를 로드해서 UI가 제대로 보이는지 확인.
     //실제 스캔 결과가 생기면 이 부분은 제거하거나 다른 데이터 로딩 함수로 대체할 예정.
-    load_dummy_data(); 
+    load_dummy_data();
 }
 
 MainWindow::~MainWindow() {
@@ -95,6 +104,49 @@ void MainWindow::setup_connections() {
         QModelIndex proxyIdx = proxy_->mapFromSource(model_->index(idx, 0));
         if (proxyIdx.isValid()) ui_->tableView->setCurrentIndex(proxyIdx);
     });
+
+    // ScanController → model/charts/status 연결.
+    // resultReady: 새 ScanResult 가 도착하면 model 에 append (UI 스레드 보장).
+    connect(controller_, &ScanController::resultReady,
+            model_, &ResultModel::appendResult);
+    connect(controller_, &ScanController::progressChanged,
+            this, [this](int done, int total) {
+        statusBar()->showMessage(
+            QStringLiteral("Scanning… %1/%2").arg(done).arg(total));
+    });
+    connect(controller_, &ScanController::scanFinished, this, [this]() {
+        charts_->updateData(model_->allResults());
+        statusBar()->showMessage(
+            QStringLiteral("Scan complete (%1 results)")
+                .arg(model_->allResults().size()), 5000);
+    });
+    connect(controller_, &ScanController::scanError, this,
+            [this](const QString& msg) {
+        QMessageBox::warning(this, "Scan Error", msg);
+        statusBar()->clearMessage();
+    });
+}
+
+// File 메뉴에 데모 스캔 액션 등록.
+void MainWindow::setup_scan_menu() {
+    auto* fileMenu = menuBar()->addMenu(QStringLiteral("&File"));
+    auto* demoAct  = fileMenu->addAction(QStringLiteral("Scan localhost (top 10)…"));
+    connect(demoAct, &QAction::triggered, this, &MainWindow::start_demo_scan);
+    fileMenu->addSeparator();
+    auto* quitAct  = fileMenu->addAction(QStringLiteral("Quit"));
+    connect(quitAct, &QAction::triggered, this, &QMainWindow::close);
+}
+
+// localhost top-10 포트 데모 스캔 트리거.
+void MainWindow::start_demo_scan() {
+    if (controller_->isScanning()) {
+        QMessageBox::information(this, "Scan",
+            QStringLiteral("A scan is already in progress."));
+        return;
+    }
+    QVector<quint16> ports{21, 22, 25, 80, 110, 143, 443, 587, 993, 8080};
+    statusBar()->showMessage(QStringLiteral("Starting localhost demo scan…"));
+    controller_->startScan(QStringLiteral("127.0.0.1"), ports);
 }
 
 //더미 데이터를 로드하는 함수. 실제 스캔 결과가 생기면 이 부분은 제거하거나 다른 데이터 로딩 함수로 대체할 예정임.
