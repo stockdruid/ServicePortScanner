@@ -70,6 +70,50 @@ constexpr std::string_view kDefaultDb = R"json(
           "service": "http",
           "version": "" }
       ]
+    },
+    {
+      "name": "redis",
+      "rarity": 4,
+      "ports": [6379],
+      "send": "*1\r\n$4\r\nPING\r\n",
+      "match": [
+        { "regex": "^\\+PONG",
+          "service": "redis",
+          "version": "" }
+      ]
+    },
+    {
+      "name": "mysql",
+      "rarity": 5,
+      "ports": [3306],
+      "send": "",
+      "match": [
+        { "regex": "^\\n([^\\x00\\r\\n]+)\\x00",
+          "service": "mysql",
+          "version": "$1" }
+      ]
+    },
+    {
+      "name": "postgresql",
+      "rarity": 5,
+      "ports": [5432],
+      "send_hex": "0000000804d2162f",
+      "match": [
+        { "regex": "^[SN]",
+          "service": "postgresql",
+          "version": "" }
+      ]
+    },
+    {
+      "name": "mongodb",
+      "rarity": 4,
+      "ports": [27017],
+      "send_hex": "250000000000000000000000dd070000000000100000001068656c6c6f000100000000",
+      "match": [
+        { "regex": "ok\\x00",
+          "service": "mongodb",
+          "version": "" }
+      ]
     }
   ]
 }
@@ -91,6 +135,25 @@ std::string apply_template(const std::string& tpl, const std::smatch& m) {
         out += tpl[i];
     }
     return out;
+}
+
+bool decode_hex(std::string_view hex, std::string& out) {
+    if ((hex.size() % 2) != 0) return false;
+    out.clear();
+    out.reserve(hex.size() / 2);
+    auto nibble = [](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return 10 + c - 'a';
+        if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+        return -1;
+    };
+    for (std::size_t i = 0; i < hex.size(); i += 2) {
+        const int hi = nibble(hex[i]);
+        const int lo = nibble(hex[i + 1]);
+        if (hi < 0 || lo < 0) return false;
+        out.push_back(static_cast<char>((hi << 4) | lo));
+    }
+    return true;
 }
 
 // JsonProbe 클래스는 probe_engine.hpp 에 선언. 여기는 method 구현.
@@ -123,6 +186,12 @@ bool parse_probe(const nlohmann::json& j, ProbeRule& out) {
     }
     if (j.contains("send") && j["send"].is_string()) {
         out.send_payload = j["send"].get<std::string>();
+    } else if (j.contains("send_hex") && j["send_hex"].is_string()) {
+        std::string send_hex = j["send_hex"].get<std::string>();
+        std::string decoded;
+        if (decode_hex(send_hex, decoded)) {
+            out.send_payload = std::move(decoded);
+        }
     }
     if (j.contains("ports") && j["ports"].is_array()) {
         for (const auto& p : j["ports"]) {

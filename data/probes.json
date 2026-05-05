@@ -54,6 +54,50 @@
           "service": "http",
           "version": "" }
       ]
+    },
+    {
+      "name": "redis",
+      "rarity": 4,
+      "ports": [6379],
+      "send": "*1\r\n$4\r\nPING\r\n",
+      "match": [
+        { "regex": "^\\+PONG",
+          "service": "redis",
+          "version": "" }
+      ]
+    },
+    {
+      "name": "mysql",
+      "rarity": 5,
+      "ports": [3306],
+      "send": "",
+      "match": [
+        { "regex": "^\\n([^\\x00\\r\\n]+)\\x00",
+          "service": "mysql",
+          "version": "$1" }
+      ]
+    },
+    {
+      "name": "postgresql",
+      "rarity": 5,
+      "ports": [5432],
+      "send_hex": "0000000804d2162f",
+      "match": [
+        { "regex": "^[SN]",
+          "service": "postgresql",
+          "version": "" }
+      ]
+    },
+    {
+      "name": "mongodb",
+      "rarity": 4,
+      "ports": [27017],
+      "send_hex": "250000000000000000000000dd070000000000100000001068656c6c6f000100000000",
+      "match": [
+        { "regex": "ok\\x00",
+          "service": "mongodb",
+          "version": "" }
+      ]
     }
   ]
 }
