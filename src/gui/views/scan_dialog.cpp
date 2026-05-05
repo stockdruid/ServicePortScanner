@@ -1,4 +1,5 @@
 #include "scan_dialog.hpp"
+#include "scope_warning_dialog.hpp"
 
 #include "cli/args.hpp"
 #include "cli/scope_guard.hpp"
@@ -36,8 +37,8 @@ ScanDialog::ScanDialog(QWidget* parent) : QDialog(parent) {
 
     auto* form = new QFormLayout;
     form->addRow(QStringLiteral("Target"), target_);
-    form->addRow(QStringLiteral("Ports"),  ports_);
-    form->addRow(QStringLiteral(""),       allow_external_);
+    form->addRow(QStringLiteral("Ports"), ports_);
+    form->addRow(QStringLiteral(""), allow_external_);
 
     auto* buttons = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
@@ -61,7 +62,7 @@ void ScanDialog::accept() {
     }
 
     const auto ports_str = ports_->text().trimmed();
-    const auto port_vec  = sps::cli::expand_port_spec(ports_str.toStdString());
+    const auto port_vec = sps::cli::expand_port_spec(ports_str.toStdString());
     if (port_vec.empty()) {
         QMessageBox::warning(this, QStringLiteral("Invalid input"),
             QStringLiteral("Could not parse ports.\n"
@@ -69,19 +70,16 @@ void ScanDialog::accept() {
         return;
     }
 
-    const sps::cli::ScopeOptions opts{ allow_external_->isChecked() };
+    const sps::cli::ScopeOptions opts{ false };
     const auto decision = sps::cli::check_scope(target.toStdString(), opts);
     if (decision != sps::cli::ScopeDecision::Allowed) {
         const auto desc_sv = sps::cli::describe(decision);
-        const auto desc = QString::fromUtf8(
-            desc_sv.data(), static_cast<int>(desc_sv.size()));
-        QMessageBox::warning(this, QStringLiteral("Scope denied"),
-            QStringLiteral("%1\n\n"
-                           "RFC1918 / loopback / link-local 은 자동 허용됩니다.\n"
-                           "외부 IP 스캔 권한이 있다면 "
-                           "'Allow external' 체크박스를 선택하세요.")
-                .arg(desc));
-        return;
+        ScopeWarningDialog warn(target,
+            QString::fromUtf8(desc_sv.data(),
+                              static_cast<int>(desc_sv.size())),
+            this);
+        if (warn.exec() != QDialog::Accepted) return;
+        allow_external_->setChecked(true);
     }
 
     QDialog::accept();

@@ -29,6 +29,8 @@ add_executable(spscan_gui
     views/settings_dialog.cpp
     views/scan_dialog.hpp
     views/scan_dialog.cpp
+    views/scope_warning_dialog.hpp
+    views/scope_warning_dialog.cpp
     views/dummy_data.hpp
 )
 
