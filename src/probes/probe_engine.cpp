@@ -2,6 +2,7 @@
 #include "probes/banner_io.hpp"
 
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <fstream>
@@ -88,7 +89,7 @@ constexpr std::string_view kDefaultDb = R"json(
       "ports": [3306],
       "send": "",
       "match": [
-        { "regex": "^\\n([^\\x00\\r\\n]+)\\x00",
+        { "regex": "^[\\s\\S]{4}\\x0a([^\\x00]+)\\x00",
           "service": "mysql",
           "version": "$1" }
       ]
@@ -108,7 +109,7 @@ constexpr std::string_view kDefaultDb = R"json(
       "name": "mongodb",
       "rarity": 4,
       "ports": [27017],
-      "send_hex": "250000000000000000000000dd070000000000100000001068656c6c6f000100000000",
+      "send_hex": "250000000000000000000000dd0700000000000000100000001068656c6c6f000100000000",
       "match": [
         { "regex": "ok\\x00",
           "service": "mongodb",
@@ -136,7 +137,7 @@ std::string apply_template(const std::string& tpl, const std::smatch& m) {
     }
     return out;
 }
-
+// json에서 send_hex으로 온 16진수 문자열을 실제 바이트 시퀀스로 변환하기 위해 만든 함수
 bool decode_hex(std::string_view hex, std::string& out) {
     if ((hex.size() % 2) != 0) return false;
     out.clear();
@@ -189,9 +190,11 @@ bool parse_probe(const nlohmann::json& j, ProbeRule& out) {
     } else if (j.contains("send_hex") && j["send_hex"].is_string()) {
         std::string send_hex = j["send_hex"].get<std::string>();
         std::string decoded;
-        if (decode_hex(send_hex, decoded)) {
-            out.send_payload = std::move(decoded);
+        if (!decode_hex(send_hex, decoded)) {
+            spdlog::warn("Failed to decode send_hex for probe '{}': invalid hex string", out.name);
+            return false;
         }
+        out.send_payload = std::move(decoded);
     }
     if (j.contains("ports") && j["ports"].is_array()) {
         for (const auto& p : j["ports"]) {

@@ -14,19 +14,28 @@ using sps::probes::ProbeRule;
 
 TEST_CASE("ProbeDatabase loads embedded default", "[probe_engine]") {
     auto db = ProbeDatabase::load_default();
-    REQUIRE(db.size() == 4);
+    REQUIRE(db.size() == 8);
 
-    bool has_ssh = false, has_ftp = false, has_smtp = false, has_http = false;
+    bool has_ssh = false, has_ftp = false, has_smtp = false, has_http = false,
+         has_redis = false, has_mysql = false, has_postgresql = false, has_mongodb = false ;
     for (const auto& r : db.rules()) {
-        if (r.name == "ssh")  has_ssh  = true;
-        if (r.name == "ftp")  has_ftp  = true;
-        if (r.name == "smtp") has_smtp = true;
-        if (r.name == "http") has_http = true;
+        if (r.name == "ssh")        has_ssh        = true;
+        if (r.name == "ftp")        has_ftp        = true;
+        if (r.name == "smtp")       has_smtp       = true;
+        if (r.name == "http")       has_http       = true;
+        if (r.name == "redis")      has_redis      = true;
+        if (r.name == "mysql")      has_mysql      = true;
+        if (r.name == "postgresql") has_postgresql = true;
+        if (r.name == "mongodb")    has_mongodb    = true;
     }
     REQUIRE(has_ssh);
     REQUIRE(has_ftp);
     REQUIRE(has_smtp);
     REQUIRE(has_http);
+    REQUIRE(has_redis);
+    REQUIRE(has_mysql);
+    REQUIRE(has_postgresql);
+    REQUIRE(has_mongodb);
 }
 
 TEST_CASE("ProbeDatabase parses minimal valid JSON", "[probe_engine]") {
@@ -48,11 +57,11 @@ TEST_CASE("ProbeDatabase parses minimal valid JSON", "[probe_engine]") {
     REQUIRE(r.send_payload.empty());
 }
 
-TEST_CASE("ProbeDatabase skips entries with invalid regex", "[probe_engine]") {
+TEST_CASE("ProbeDatabase skips entries with invalid send_hex", "[probe_engine]") {
     constexpr const char* json = R"({
         "version": 1,
         "probes": [
-            { "name": "bad", "match": [ { "regex": "[unclosed" } ] }
+            { "name": "bad", "ports": [123], "send_hex": "invalidhex", "match": [ { "regex": "ok" } ] }
         ]
     })";
     auto db = ProbeDatabase::parse(json);
@@ -133,4 +142,69 @@ TEST_CASE("ProbeDatabase loads from file (round-trip)",
 TEST_CASE("ProbeDatabase missing file returns empty", "[probe_engine]") {
     auto db = ProbeDatabase::load_from_file("/nonexistent/_path_/probes.json");
     REQUIRE(db.empty());
+}
+
+
+TEST_CASE("MongoDB send_hex probe parses correctly", "[probe_engine]") {
+    constexpr const char* json = R"({
+        "version": 1,
+        "probes": [
+            {
+                "name": "mongodb",
+                "rarity": 4,
+                "ports": [27017],
+                "send_hex": "250000000000000000000000dd0700000000000000100000001068656c6c6f000100000000",
+                "match": [
+                    { "regex": "ok\\x00", "service": "mongodb", "version": "" }
+                ]
+            }
+        ]
+    })";
+    auto db = ProbeDatabase::parse(json);
+    REQUIRE(db.size() == 1);
+
+    const auto& r = db.rules().front();
+    REQUIRE(r.name == "mongodb");
+    REQUIRE(r.ports.front() == 27017);
+    REQUIRE(r.send_payload.size() == 37);
+    REQUIRE((unsigned char)r.send_payload[0] == 0x25);
+
+    std::string response = "some data ok";
+    response += '\x00';
+    response += " more";
+    std::smatch m;
+    REQUIRE(std::regex_search(response, m, r.matches.front().re));
+}
+
+TEST_CASE("MySQL regex captures version from banner", "[probe_engine]") {
+    constexpr const char* json = R"({
+        "version": 1,
+        "probes": [
+            {
+                "name": "mysql",
+                "rarity": 5,
+                "ports": [3306],
+                "send": "",
+                "match": [
+                    { "regex": "^[\\s\\S]{4}\\x0a([^\\x00]+)\\x00",
+                      "service": "mysql", "version": "$1" }
+                ]
+            }
+        ]
+    })";
+    auto db = ProbeDatabase::parse(json);
+    REQUIRE(db.size() == 1);
+
+    const auto& r = db.rules().front();
+    REQUIRE(r.name == "mysql");
+
+    std::string banner = "\x4a\x01\x02\x03";
+    banner += '\x0a';
+    banner += "8.0.33-MySQL Community Server";
+    banner += '\x00';
+
+    std::smatch m;
+    REQUIRE(std::regex_search(banner, m, r.matches.front().re));
+    REQUIRE(m.size() >= 2);
+    REQUIRE(m[1].str() == "8.0.33-MySQL Community Server");
 }
