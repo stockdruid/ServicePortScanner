@@ -1,4 +1,5 @@
 #include "charts_panel.hpp"
+#include "settings_dialog.hpp"
 
 #include <QPainter>
 #include <QVBoxLayout>
@@ -50,7 +51,10 @@ QScatterSeries* series_for_risk(double risk,
 ChartsPanel::ChartsPanel(QWidget* parent) : QWidget(parent) {
     matrix_ = new QChart;
     matrix_->setTitle("Risk Priority Matrix (CVSS x EPSS)");
-    matrix_->setTheme(QChart::ChartThemeDark);
+    const auto s = sps::gui::load_settings();
+    matrix_->setTheme(s.theme == sps::gui::Theme::Dark
+                      ? QChart::ChartThemeDark
+                      : QChart::ChartThemeLight);
     matrix_->setAnimationOptions(QChart::SeriesAnimations); //데이터가 표시될 때 series 별로 애니메이션 효과 적용
     matrix_->setMargins(QMargins(12, 18, 18, 12));
 
@@ -67,6 +71,11 @@ ChartsPanel::ChartsPanel(QWidget* parent) : QWidget(parent) {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(matrix_view_, 1);
+}
+
+void ChartsPanel::setTheme(bool dark) {
+    matrix_->setTheme(dark ? QChart::ChartThemeDark
+                           : QChart::ChartThemeLight);
 }
 
 // 차트 데이터를 새로 그리는 함수.

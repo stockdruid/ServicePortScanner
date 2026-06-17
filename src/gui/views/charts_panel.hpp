@@ -41,6 +41,7 @@ public:
     나중에는 MainWindow가 스캔 결과를 받아서 모델에 넣고,
     모델이 변경될 때마다 ChartsPanel에 업데이트를 요청하는 형태로 변경 예정.*/
     void updateData(const std::vector<core::ScanResult>& results);
+    void setTheme(bool dark);
 
 // 차트의 점을 클릭했을 때 발생시키는 signal
 // MainWindow에서 이 signal을 받아서 해당 ScanResult의 상세 정보를 DetailsPanel에 표시하는 형태로 연결할 예정.

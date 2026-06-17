@@ -229,6 +229,7 @@ void MainWindow::open_settings() {
     const auto s = dlg.settings();
     save_settings(s);
     apply_theme(*qApp, s.theme);
+    charts_->setTheme(s.theme == Theme::Dark);
     controller_->setRate(s.rate_pps);
     controller_->setTimeout(std::chrono::milliseconds(s.timeout_ms));
     statusBar()->showMessage(QStringLiteral("Settings updated"), 3000);
