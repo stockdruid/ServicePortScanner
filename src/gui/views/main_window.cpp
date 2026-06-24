@@ -17,8 +17,10 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QStatusBar>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include <chrono>
@@ -90,6 +92,13 @@ MainWindow::MainWindow(QWidget* parent)   //QWidget를 부모로 받는 생성�
     auto* chartsLayout = new QVBoxLayout(ui_->chartsContainer);
     chartsLayout->setContentsMargins(0, 0, 0, 0);
     chartsLayout->addWidget(charts_);   //차트 패널을 chartsContainer에 넣음.
+
+    progress_bar_ = new QProgressBar(this);
+    progress_bar_->setTextVisible(true);
+    progress_bar_->setFixedHeight(22);
+    progress_bar_->setRange(0, 100);
+    progress_bar_->hide();
+    ui_->leftLayout->insertWidget(0, progress_bar_);
 
     ui_->splitter->setSizes({800, 350});  //초기 분할 비율 설정. 왼쪽 테이블이 더 넓게 보이도록.
 
@@ -171,17 +180,27 @@ void MainWindow::setup_connections() {
             model_, &ResultModel::appendResult);
     connect(controller_, &ScanController::progressChanged,
             this, [this](int done, int total) {
+        progress_bar_->setRange(0, total);
+        progress_bar_->setValue(done);
+        progress_bar_->setFormat(
+            QStringLiteral("Scanning… %1 / %2 (%p%)").arg(done).arg(total));
+        progress_bar_->show();
         statusBar()->showMessage(
             QStringLiteral("Scanning… %1/%2").arg(done).arg(total));
+        statusBar()->clearMessage();
     });
     connect(controller_, &ScanController::scanFinished, this, [this]() {
         charts_->updateData(model_->allResults());
+        progress_bar_->setValue(progress_bar_->maximum());
+        progress_bar_->setFormat(QStringLiteral("Done"));
+        QTimer::singleShot(2000, progress_bar_, &QWidget::hide);
         statusBar()->showMessage(
             QStringLiteral("Scan complete (%1 results)")
                 .arg(model_->allResults().size()), 5000);
     });
     connect(controller_, &ScanController::scanError, this,
             [this](const QString& msg) {
+        progress_bar_->hide();
         QMessageBox::warning(this, "Scan Error", msg);
         statusBar()->clearMessage();
     });
@@ -215,9 +234,18 @@ void MainWindow::open_scan_dialog() {
     ScanDialog dlg(this);
     if (dlg.exec() != QDialog::Accepted) return;
     const auto req = dlg.request();
+    model_->clear();
+    charts_->updateData(model_->allResults());
+    progress_bar_->setRange(0, req.ports.size());
+    progress_bar_->setValue(0);
+    progress_bar_->setFormat(
+        QStringLiteral("Scanning… 0 / %1 (%p%)").arg(req.ports.size()));
+    progress_bar_->show();
+    statusBar()->clearMessage();
     statusBar()->showMessage(
         QStringLiteral("Starting scan: %1 (%2 ports)…")
             .arg(req.target).arg(req.ports.size()));
+    statusBar()->clearMessage();
     controller_->startScan(req.target, req.ports);
 }
 
@@ -242,7 +270,16 @@ void MainWindow::start_demo_scan() {
         return;
     }
     QVector<quint16> ports{21, 22, 25, 80, 110, 143, 443, 587, 993, 8080};
+    model_->clear();
+    charts_->updateData(model_->allResults());
+    progress_bar_->setRange(0, ports.size());
+    progress_bar_->setValue(0);
+    progress_bar_->setFormat(
+        QStringLiteral("Scanning… 0 / %1 (%p%)").arg(ports.size()));
+    progress_bar_->show();
+    statusBar()->clearMessage();
     statusBar()->showMessage(QStringLiteral("Starting localhost demo scan…"));
+    statusBar()->clearMessage();
     controller_->startScan(QStringLiteral("127.0.0.1"), ports);
 }
 

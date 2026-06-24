@@ -5,6 +5,7 @@
 */
 
 #include <QMainWindow>
+#include <QProgressBar>
 #include <QSortFilterProxyModel>    //결과 테이블에 정렬/필터링 기능을 추가하기 위해 사용함.
 #include "result_model.hpp"
 #include "details_panel.hpp"
@@ -32,6 +33,7 @@ private:
     DetailsPanel*           detail_     = nullptr;
     ChartsPanel*            charts_     = nullptr;
     ScanController*         controller_ = nullptr;   // qt_bridge ↔ model 어댑터.
+    QProgressBar*           progress_bar_ = nullptr;
 
     void setup_delegates();   //테이블의 특정 열에 대한 delegate 설정함.
     void setup_connections();    //테이블의 selection model과 on_row_selected 슬롯을 연결함.
